@@ -101,8 +101,10 @@ async function main() {
     await prisma.movie.upsert({ where: { id: m.id }, update: {}, create: m });
   }
 
-  // Shows (today and next 3 days)
-  const today = new Date();
+  // Shows (today and next 3 days) - use local timezone
+  const now = new Date();
+  const localOffset = now.getTimezoneOffset() * 60 * 1000;
+  const today = new Date(now.getTime() - localOffset);
   today.setHours(0, 0, 0, 0);
 
   const showDefs = [

@@ -1,5 +1,6 @@
 // app/api/bookings/[id]/cancel/route.ts
 import { NextResponse } from 'next/server'
+import { PrismaClient } from '@prisma/client'
 import { db } from '@/lib/db'
 import { getSession, hasPermission } from '@/lib/auth'
 import { z } from 'zod'
@@ -45,7 +46,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       refundStatus = 'REJECTED'
     }
 
-    const result = await db.$transaction(async (tx) => {
+    const result = await db.$transaction(async (tx: PrismaClient) => {
       const updated = await tx.booking.update({
         where: { id: booking.id },
         data: { status: refundAmount > 0 ? 'REFUNDED' : 'CANCELLED' },

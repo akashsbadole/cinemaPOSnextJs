@@ -60,7 +60,9 @@ export default function POSPage() {
 
   // Load today's shows
   useEffect(() => {
-    fetch('/api/shows?date=' + new Date().toISOString().slice(0, 10))
+    const today = new Date()
+    const dateStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0')
+    fetch('/api/shows?date=' + dateStr)
       .then(r => r.json())
       .then(d => {
         const active = (d.shows || []).filter((s: any) => s.status !== 'CANCELLED' && s.status !== 'COMPLETED')
