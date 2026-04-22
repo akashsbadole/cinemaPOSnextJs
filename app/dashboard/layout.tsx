@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   ]},
   { section: 'Booking', items: [
     { href: '/dashboard/pos', icon: '💳', label: 'POS Booking' },
+    { href: '/dashboard/scan', icon: '📷', label: 'Scan Ticket' },
     { href: '/dashboard/bookings', icon: '🎟️', label: 'Bookings' },
     { href: '/dashboard/coupons', icon: '🎁', label: 'Coupons' },
   ]},
