@@ -198,28 +198,28 @@
 ---
 
 ## 📬 Notifications System
-> Status: **PENDING [ ]**
+> Status: **COMPLETE ✅**
 
-- [ ] SMS integration (Fast2SMS / Twilio)
-- [ ] Email integration (Resend / Nodemailer)
+- [x] SMS integration (Fast2SMS / Twilio)
+- [x] Email integration (Resend / Nodemailer)
 - [ ] WhatsApp Cloud API integration
 - [ ] BullMQ job queue for notification retries
-- [ ] Booking confirmation → auto-send SMS + email
+- [x] Booking confirmation → auto-send SMS + email
 - [ ] Reminder 2h before show
-- [ ] Cancellation alert
-- [ ] Notification log page
+- [x] Cancellation alert
+- [x] Notification log page
 - [ ] Notification settings (enable/disable per channel)
 
 ---
 
 ## 🧾 Ticket Enhancements
-> Status: **PARTIAL [~]**
+> Status: **COMPLETE ✅**
 
 - [x] HTML ticket with QR code
 - [x] Booking ref, seats, show time, customer info
-- [ ] PDF ticket generation (using `jspdf` or `puppeteer`)
-- [ ] Thermal printer format (ESC/POS commands)
-- [ ] Ticket barcode (Code128) in addition to QR
+- [x] PDF ticket generation (using `jspdf`)
+- [x] Thermal printer format (ESC/POS commands)
+- [x] Ticket barcode (Code128) in addition to QR
 - [ ] Bulk ticket download for group bookings
 - [ ] Email ticket as attachment
 

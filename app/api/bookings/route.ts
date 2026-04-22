@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/auth'
 import { lockSeats, generateBookingRef } from '@/lib/seat-lock'
+import { sendBookingConfirmation } from '@/lib/notifications'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -176,6 +177,21 @@ export async function POST(req: Request) {
 
       return b
     })
+
+    // Send notification (async, don't wait)
+    const showStart = new Date(booking.show.startTime)
+    sendBookingConfirmation({
+      bookingRef: booking.bookingRef,
+      customerName: booking.customerName || '',
+      customerPhone: booking.customerPhone || '',
+      customerEmail: booking.customerEmail || undefined,
+      movieTitle: booking.show.movie.title,
+      showDate: showStart.toLocaleDateString('en-IN'),
+      showTime: showStart.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+      screen: booking.show.screen.name,
+      seats: booking.bookingSeats.map(bs => `${bs.seat.row}${bs.seat.number}`),
+      totalAmount: booking.finalAmount,
+    }).catch(console.error)
 
     return NextResponse.json({ booking }, { status: 201 })
   } catch (e: any) {

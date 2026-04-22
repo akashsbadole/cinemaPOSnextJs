@@ -25,6 +25,7 @@ const NAV_ITEMS = [
   { section: 'Reports', items: [
     { href: '/dashboard/analytics', icon: '📊', label: 'Analytics' },
     { href: '/dashboard/reports', icon: '📋', label: 'Reports' },
+    { href: '/dashboard/notifications', icon: '🔔', label: 'Notifications' },
   ]},
   { section: 'Management', items: [
     { href: '/dashboard/theaters', icon: '🏛️', label: 'Theaters' },

@@ -234,7 +234,18 @@ export default function POSPage() {
           ))}
         </div>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <a href={`/api/bookings/${booking.bookingRef}/ticket`} target="_blank" rel="noreferrer" className="btn btn-primary">🖨️ Print Ticket</a>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <a href={`/api/bookings/${booking.bookingRef}/ticket`} target="_blank" rel="noreferrer" className="btn btn-primary">🖨️ Print</a>
+            <select 
+              onChange={(e) => { if (e.target.value) window.open(`/api/bookings/${booking.bookingRef}/ticket?format=${e.target.value}`, '_blank') }}
+              style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer' }}
+            >
+              <option value="">Format</option>
+              <option value="html">HTML</option>
+              <option value="pdf">PDF</option>
+              <option value="thermal">Thermal</option>
+            </select>
+          </div>
           <button onClick={resetBooking} className="btn btn-ghost">+ New Booking</button>
           <button onClick={() => router.push('/dashboard/bookings')} className="btn btn-ghost">All Bookings</button>
         </div>

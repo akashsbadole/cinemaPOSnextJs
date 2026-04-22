@@ -2,14 +2,17 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/auth'
-import { generateTicketHTML } from '@/lib/ticket'
+import { generateTicketHTML, generateTicketPDF, generateThermalTicket, TicketData } from '@/lib/ticket'
 import { format } from 'date-fns'
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: { id: string } }) {
   const user = await getSession()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
+    const { searchParams } = new URL(req.url)
+    const formatType = searchParams.get('format') || 'html'
+
     const booking = await db.booking.findFirst({
       where: { OR: [{ id: params.id }, { bookingRef: params.id }] },
       include: {
@@ -19,9 +22,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     })
     if (!booking) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    const seats = booking.bookingSeats.map(bs => `${bs.seat.row}${bs.seat.number}`)
-
-    const html = await generateTicketHTML({
+    const seats = booking.bookingSeats.map((bs: any) => `${bs.seat.row}${bs.seat.number}`)
+    const ticketData: TicketData = {
       bookingRef: booking.bookingRef,
       movieTitle: booking.show.movie.title,
       showDate: format(new Date(booking.show.startTime), 'dd MMM yyyy'),
@@ -32,8 +34,29 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       customerName: booking.customerName || 'Guest',
       totalAmount: booking.finalAmount,
       format: booking.show.movie.format,
-    })
+    }
 
+    if (formatType === 'pdf') {
+      const pdfBuffer = await generateTicketPDF(ticketData)
+      return new NextResponse(new Uint8Array(pdfBuffer), {
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="ticket-${booking.bookingRef}.pdf"`,
+        },
+      })
+    }
+
+    if (formatType === 'thermal') {
+      const thermal = generateThermalTicket(ticketData)
+      return new NextResponse(thermal, {
+        headers: {
+          'Content-Type': 'text/plain',
+          'Content-Disposition': `attachment; filename="ticket-${booking.bookingRef}.txt"`,
+        },
+      })
+    }
+
+    const html = await generateTicketHTML(ticketData)
     return new NextResponse(html, {
       headers: {
         'Content-Type': 'text/html',

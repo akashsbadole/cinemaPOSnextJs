@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import { db } from '@/lib/db'
 import { getSession, hasPermission } from '@/lib/auth'
+import { sendCancellationAlert } from '@/lib/notifications'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -71,6 +72,28 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
       return updated
     })
+
+    // Send cancellation notification
+    const bookingWithDetails = await db.booking.findUnique({
+      where: { id: booking.id },
+      include: { show: { include: { movie: true, screen: true } }, bookingSeats: { include: { seat: true } } },
+    })
+    if (bookingWithDetails) {
+      const showStart = new Date(bookingWithDetails.show.startTime)
+      sendCancellationAlert({
+        bookingRef: bookingWithDetails.bookingRef,
+        customerName: bookingWithDetails.customerName || '',
+        customerPhone: bookingWithDetails.customerPhone || '',
+        customerEmail: bookingWithDetails.customerEmail || undefined,
+        movieTitle: bookingWithDetails.show.movie.title,
+        showDate: showStart.toLocaleDateString('en-IN'),
+        showTime: showStart.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+        screen: bookingWithDetails.show.screen.name,
+        seats: bookingWithDetails.bookingSeats.map(bs => `${bs.seat.row}${bs.seat.number}`),
+        totalAmount: bookingWithDetails.finalAmount,
+        refundAmount,
+      }).catch(console.error)
+    }
 
     return NextResponse.json({ booking: result, refundAmount, refundStatus })
   } catch (e: any) {

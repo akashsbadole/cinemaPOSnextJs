@@ -52,7 +52,12 @@ export default function BookingsPage() {
   }
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 4000) }
-  const openTicket = (b: any) => window.open(`/api/bookings/${b.bookingRef}/ticket`, '_blank')
+  const openTicket = (b: any, format?: string) => {
+    const url = format 
+      ? `/api/bookings/${b.bookingRef}/ticket?format=${format}` 
+      : `/api/bookings/${b.bookingRef}/ticket`
+    window.open(url, '_blank')
+  }
 
   return (
     <div className="animate-fadeIn" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -139,7 +144,19 @@ export default function BookingsPage() {
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <button className="btn btn-ghost btn-sm" onClick={() => openTicket(b)}>🎟️</button>
+                        <div style={{ position: 'relative' }}>
+                          <button className="btn btn-ghost btn-sm" onClick={() => openTicket(b)}>🎟️</button>
+                          <select 
+                            onChange={(e) => { if (e.target.value) openTicket(b, e.target.value) }}
+                            style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
+                            title="Download ticket"
+                          >
+                            <option value="">🎟️</option>
+                            <option value="html">HTML</option>
+                            <option value="pdf">PDF</option>
+                            <option value="thermal">Thermal</option>
+                          </select>
+                        </div>
                         {(b.status === 'CONFIRMED' || b.status === 'PENDING') && (
                           <button className="btn btn-danger btn-sm" onClick={() => { setSelected(b); setCancelReason(''); setShowCancel(true) }}>Cancel</button>
                         )}
