@@ -1,0 +1,78 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devPath": "http://localhost:3000",
+    "distDir": "../out",
+    "withGlobalTauri": false
+  },
+  "package": {
+    "productName": "CinePOS",
+    "version": "1.0.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": false,
+      "shell": { "all": false, "open": true },
+      "window": { "all": true },
+      "fs": { "all": true, "scope": ["$APPDATA/*", "$DOCUMENT/*", "$DOWNLOAD/*"] },
+      "path": { "all": true },
+      "dialog": { "all": true },
+      "notification": { "all": true },
+      "updater": false
+    },
+    "bundle": {
+      "active": true,
+      "targets": "all",
+      "identifier": "com.cinepos.app",
+      "icon": [
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/128x128@2x.png",
+        "icons/icon.icns",
+        "icons/icon.ico"
+      ],
+      "resources": [],
+      "externalBin": [],
+      "copyright": "© 2024 CinePOS",
+      "category": "Business",
+      "shortDescription": "Movie Booking POS System",
+      "longDescription": "Production-grade Movie/Event Booking POS SaaS with real-time seat locking, analytics, and multi-role management.",
+      "deb": { "depends": [] },
+      "macOS": {
+        "frameworks": [],
+        "exceptionDomain": "localhost",
+        "entitlements": null,
+        "signingIdentity": null,
+        "providerShortName": null
+      },
+      "windows": {
+        "certificateThumbprint": null,
+        "digestAlgorithm": "sha256",
+        "timestampUrl": ""
+      }
+    },
+    "security": {
+      "csp": "default-src 'self' http://localhost:3000; connect-src 'self' http://localhost:3000; img-src 'self' data: https://fonts.googleapis.com https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'"
+    },
+    "updater": { "active": false },
+    "windows": [
+      {
+        "fullscreen": false,
+        "resizable": true,
+        "title": "CinePOS",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 900,
+        "minHeight": 600,
+        "center": true,
+        "decorations": true,
+        "transparent": false,
+        "fileDropEnabled": false,
+        "label": "main",
+        "url": "http://localhost:3000"
+      }
+    ]
+  }
+}

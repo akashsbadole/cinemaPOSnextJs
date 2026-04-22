@@ -1,0 +1,323 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(CLERK)
+  phone     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bookings  Booking[]
+  sessions  Session[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Theater {
+  id        String   @id @default(cuid())
+  name      String
+  location  String
+  address   String?
+  phone     String?
+  email     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  screens   Screen[]
+
+  @@map("theaters")
+}
+
+model Screen {
+  id         String   @id @default(cuid())
+  theaterId  String
+  name       String
+  totalSeats Int
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  theater    Theater  @relation(fields: [theaterId], references: [id], onDelete: Cascade)
+  seats      Seat[]
+  shows      Show[]
+
+  @@map("screens")
+}
+
+model Seat {
+  id       String   @id @default(cuid())
+  screenId String
+  row      String
+  number   Int
+  type     SeatType @default(REGULAR)
+  active   Boolean  @default(true)
+  coordX   Float?
+  coordY   Float?
+  coordZ   Float?
+
+  screen       Screen        @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  bookingSeats BookingSeat[]
+
+  @@unique([screenId, row, number])
+  @@map("seats")
+}
+
+model Movie {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  duration    Int      // minutes
+  genre       String?
+  language    String   @default("Hindi")
+  format      String   @default("2D")  // 2D, 3D, IMAX, 4DX
+  rating      String?  // U, UA, A
+  posterUrl   String?
+  trailerUrl  String?
+  releaseDate DateTime?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  shows       Show[]
+
+  @@map("movies")
+}
+
+model Show {
+  id          String     @id @default(cuid())
+  movieId     String
+  screenId    String
+  startTime   DateTime
+  endTime     DateTime
+  status      ShowStatus @default(SCHEDULED)
+  priceVip    Float      @default(600)
+  pricePremium Float     @default(350)
+  priceRegular Float     @default(200)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  movie       Movie      @relation(fields: [movieId], references: [id])
+  screen      Screen     @relation(fields: [screenId], references: [id])
+  bookings    Booking[]
+  seatLocks   SeatLock[]
+
+  @@map("shows")
+}
+
+model SeatLock {
+  id        String   @id @default(cuid())
+  showId    String
+  seatId    String
+  sessionId String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  show      Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
+
+  @@unique([showId, seatId])
+  @@map("seat_locks")
+}
+
+model Booking {
+  id            String        @id @default(cuid())
+  bookingRef    String        @unique
+  userId        String?
+  showId        String
+  customerName  String?
+  customerEmail String?
+  customerPhone String?
+  status        BookingStatus @default(PENDING)
+  totalAmount   Float
+  discountAmount Float        @default(0)
+  finalAmount   Float
+  channel       Channel       @default(POS)
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  user          User?         @relation(fields: [userId], references: [id])
+  show          Show          @relation(fields: [showId], references: [id])
+  bookingSeats  BookingSeat[]
+  payment       Payment?
+  cancellation  Cancellation?
+
+  @@map("bookings")
+}
+
+model BookingSeat {
+  id        String  @id @default(cuid())
+  bookingId String
+  seatId    String
+  price     Float
+
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  seat      Seat    @relation(fields: [seatId], references: [id])
+
+  @@unique([bookingId, seatId])
+  @@map("booking_seats")
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  bookingId     String        @unique
+  method        PaymentMethod
+  amount        Float
+  status        PaymentStatus @default(PENDING)
+  transactionId String?
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  booking       Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+model Cancellation {
+  id           String           @id @default(cuid())
+  bookingId    String           @unique
+  reason       String?
+  refundAmount Float            @default(0)
+  refundMethod RefundMethod     @default(WALLET)
+  status       CancellationStatus @default(PENDING)
+  cancelledAt  DateTime         @default(now())
+
+  booking      Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@map("cancellations")
+}
+
+model Coupon {
+  id          String      @id @default(cuid())
+  code        String      @unique
+  type        CouponType  @default(PERCENT)
+  value       Float
+  minAmount   Float       @default(0)
+  maxDiscount Float?
+  usageLimit  Int?
+  usageCount  Int         @default(0)
+  validFrom   DateTime    @default(now())
+  validUntil  DateTime?
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+
+  @@map("coupons")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  type      NotifType
+  title     String
+  message   String
+  channel   String           // sms, email, whatsapp
+  recipient String
+  status    NotifStatus      @default(PENDING)
+  retries   Int              @default(0)
+  createdAt DateTime         @default(now())
+  sentAt    DateTime?
+
+  @@map("notifications")
+}
+
+// Enums
+enum Role {
+  SUPER_ADMIN
+  THEATER_OWNER
+  MANAGER
+  CLERK
+}
+
+enum SeatType {
+  VIP
+  PREMIUM
+  REGULAR
+}
+
+enum ShowStatus {
+  SCHEDULED
+  LIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  CARD
+  WALLET
+  ONLINE
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum RefundMethod {
+  WALLET
+  ORIGINAL
+  CASH
+}
+
+enum CancellationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum CouponType {
+  PERCENT
+  FLAT
+}
+
+enum NotifType {
+  BOOKING_CONFIRM
+  CANCELLATION
+  REMINDER
+  PAYMENT
+}
+
+enum NotifStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum Channel {
+  ONLINE
+  POS
+  PHONE
+}
