@@ -1,5 +1,7 @@
 # 🎬 CinePOS — Movie Booking & Theater Management System
 
+![cinemapos-dashboard](cinemapos-dashboard.png) 
+
 A production-grade, full-stack Movie/Event Booking POS SaaS built with:
 
 - **Frontend**: Next.js 14 (App Router) + React 18
