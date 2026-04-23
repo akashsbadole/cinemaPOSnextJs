@@ -47,7 +47,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       refundStatus = 'REJECTED'
     }
 
-    const result = await db.$transaction(async (tx: PrismaClient) => {
+    const result = await db.$transaction(async (tx) => {
       const updated = await tx.booking.update({
         where: { id: booking.id },
         data: { status: refundAmount > 0 ? 'REFUNDED' : 'CANCELLED' },
