@@ -16,11 +16,13 @@ model User {
   role      String   @default("CLERK")
   phone     String?
   active    Boolean  @default(true)
+  theaterId String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   bookings  Booking[]
   sessions  Session[]
+  theater   Theater? @relation(fields: [theaterId], references: [id])
 
   @@map("users")
 }
@@ -48,6 +50,7 @@ model Theater {
   updatedAt DateTime @updatedAt
 
   screens   Screen[]
+  users     User[]
 
   @@map("theaters")
 }
@@ -241,4 +244,12 @@ model Notification {
   sentAt    DateTime?
 
   @@map("notifications")
+}
+
+model SystemSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+
+  @@map("system_settings")
 }

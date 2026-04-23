@@ -52,10 +52,12 @@ export function canAccess(userRole: string, requiredRoles: string[]): boolean {
 }
 
 export const ROLE_HIERARCHY: Record<string, number> = {
-  SUPER_ADMIN: 4,
-  THEATER_OWNER: 3,
+  SUPER_ADMIN: 5,
+  THEATER_OWNER: 4,
+  VENDOR: 3,
   MANAGER: 2,
   CLERK: 1,
+  CUSTOMER: 0,
 }
 
 export function hasPermission(userRole: string, minRole: string): boolean {
