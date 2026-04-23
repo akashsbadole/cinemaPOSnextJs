@@ -2,6 +2,7 @@
 // app/dashboard/bookings/page.tsx
 import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
+import Link from 'next/link'
 
 export default function BookingsPage() {
   const [bookings, setBookings] = useState<any[]>([])
@@ -96,6 +97,7 @@ export default function BookingsPage() {
                   <th>Movie</th>
                   <th className="hide-mobile">Show Time</th>
                   <th>Seats</th>
+                  <th className="hide-mobile">Food</th>
                   <th>Amount</th>
                   <th className="hide-mobile">Payment</th>
                   <th>Status</th>
@@ -104,11 +106,13 @@ export default function BookingsPage() {
               </thead>
               <tbody>
                 {bookings.length === 0 ? (
-                  <tr><td colSpan={9} style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>No bookings found</td></tr>
+                  <tr><td colSpan={10} style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>No bookings found</td></tr>
                 ) : bookings.map(b => (
                   <tr key={b.id}>
                     <td>
-                      <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)', fontWeight: 700, fontSize: 13 }}>{b.bookingRef}</span>
+                      <Link href={`/dashboard/bookings/${b.bookingRef}`}>
+                        <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)', fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>{b.bookingRef}</span>
+                      </Link>
                       <div style={{ fontSize: 10, color: 'var(--muted)', fontFamily: 'var(--font-mono)', marginTop: 1 }}>{format(new Date(b.createdAt), 'dd MMM · h:mm a')}</div>
                     </td>
                     <td>
@@ -131,6 +135,15 @@ export default function BookingsPage() {
                         ))}
                         {b.bookingSeats?.length > 4 && <span style={{ fontSize: 10, color: 'var(--muted)' }}>+{b.bookingSeats.length - 4}</span>}
                       </div>
+                    </td>
+                    <td className="hide-mobile">
+                      {b.bookingItems?.length > 0 ? (
+                        <Link href={`/dashboard/bookings/${b.bookingRef}`}>
+                          <span style={{ background: 'var(--accent)', color: '#000', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 3, cursor: 'pointer' }}>
+                            🍿{b.bookingItems.length}
+                          </span>
+                        </Link>
+                      ) : <span style={{ color: 'var(--muted)', fontSize: 11 }}>—</span>}
                     </td>
                     <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent)' }}>₹{b.finalAmount?.toLocaleString('en-IN')}</td>
                     <td className="hide-mobile">

@@ -15,6 +15,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       include: {
         show: { include: { movie: true, screen: { include: { theater: true } } } },
         bookingSeats: { include: { seat: true } },
+        bookingItems: { include: { foodItem: true } },
         payment: true,
         cancellation: true,
       },

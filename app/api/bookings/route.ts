@@ -63,6 +63,7 @@ export async function GET(req: Request) {
         include: {
           show: { include: { movie: true, screen: { include: { theater: true } } } },
           bookingSeats: { include: { seat: true } },
+          bookingItems: { include: { foodItem: true } },
           payment: true,
         },
         orderBy: { createdAt: 'desc' },
