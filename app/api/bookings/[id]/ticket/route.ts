@@ -18,11 +18,18 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       include: {
         show: { include: { movie: true, screen: { include: { theater: true } } } },
         bookingSeats: { include: { seat: true } },
+        bookingItems: { include: { foodItem: true } },
       },
     })
     if (!booking) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     const seats = booking.bookingSeats.map((bs: any) => `${bs.seat.row}${bs.seat.number}`)
+    const foodItems = booking.bookingItems?.map((bi: any) => ({
+      name: bi.foodItem.name,
+      quantity: bi.quantity,
+      price: bi.price,
+    })) || []
+    const foodTotal = foodItems.reduce((sum: number, fi: any) => sum + fi.price * fi.quantity, 0)
     const ticketData: TicketData = {
       bookingRef: booking.bookingRef,
       movieTitle: booking.show.movie.title,
@@ -34,6 +41,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       customerName: booking.customerName || 'Guest',
       totalAmount: booking.finalAmount,
       format: booking.show.movie.format,
+      foodItems: foodItems.length > 0 ? foodItems : undefined,
+      foodTotal: foodTotal > 0 ? foodTotal : undefined,
     }
 
     if (formatType === 'pdf') {

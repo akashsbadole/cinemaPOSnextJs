@@ -172,6 +172,30 @@ async function main() {
 
   console.log('✅ Coupons created');
 
+  // Food Items
+  const foodDefs = [
+    { id: 'food-1', name: 'Popcorn Regular', price: 120, category: 'POPCORN', sortOrder: 1 },
+    { id: 'food-2', name: 'Popcorn Large', price: 180, category: 'POPCORN', sortOrder: 2 },
+    { id: 'food-3', name: 'Coke Regular', price: 80, category: 'DRINKS', sortOrder: 3 },
+    { id: 'food-4', name: 'Coke Large', price: 120, category: 'DRINKS', sortOrder: 4 },
+    { id: 'food-5', name: 'Sprite', price: 80, category: 'DRINKS', sortOrder: 5 },
+    { id: 'food-6', name: 'Nachos', price: 150, category: 'SNACKS', sortOrder: 6 },
+    { id: 'food-7', name: 'Hot Dog', price: 140, category: 'SNACKS', sortOrder: 7 },
+    { id: 'food-8', name: 'Crispy Fries', price: 110, category: 'SNACKS', sortOrder: 8 },
+    { id: 'food-9', name: 'Chocolate Bar', price: 60, category: 'SNACKS', sortOrder: 9 },
+    { id: 'food-10', name: 'Samosa', price: 40, category: 'SNACKS', sortOrder: 10 },
+    { id: 'food-11', name: 'Sandwich', price: 90, category: 'SNACKS', sortOrder: 11 },
+    { id: 'food-12', name: 'Combo (Popcorn + Drink)', price: 250, category: 'COMBO', sortOrder: 12, description: 'Regular popcorn with regular drink' },
+  ]
+  for (const fd of foodDefs) {
+    await prisma.foodItem.upsert({
+      where: { id: fd.id },
+      update: {},
+      create: fd,
+    })
+  }
+  console.log('✅ Food items created');
+
   // Sample bookings for reports
   const shows = await prisma.show.findMany({ where: { status: 'COMPLETED' }, take: 10, include: { screen: { include: { seats: true } } } });
   let bookingCount = 0;

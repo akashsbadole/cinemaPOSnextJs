@@ -162,6 +162,7 @@ model Booking {
   user           User?         @relation(fields: [userId], references: [id])
   show           Show          @relation(fields: [showId], references: [id])
   bookingSeats   BookingSeat[]
+  bookingItems   BookingItem[]
   payment        Payment?
   cancellation   Cancellation?
 
@@ -241,4 +242,35 @@ model Notification {
   sentAt    DateTime?
 
   @@map("notifications")
+}
+
+model FoodItem {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Float
+  category    String   // "POPCORN", "DRINKS", "SNACKS", "COMBO"
+  imageUrl    String?
+  available   Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  bookingItems BookingItem[]
+
+  @@map("food_items")
+}
+
+model BookingItem {
+  id        String  @id @default(cuid())
+  bookingId String
+  foodItemId String
+  quantity  Int     @default(1)
+  price     Float   // price at time of booking (snapshot)
+
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  foodItem  FoodItem @relation(fields: [foodItemId], references: [id])
+
+  @@unique([bookingId, foodItemId])
+  @@map("booking_items")
 }

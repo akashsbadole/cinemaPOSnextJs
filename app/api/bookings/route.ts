@@ -16,6 +16,10 @@ const schema = z.object({
   couponCode: z.string().optional(),
   channel: z.enum(['POS', 'ONLINE', 'PHONE']).default('POS'),
   sessionId: z.string(),
+  foodItems: z.array(z.object({
+    foodItemId: z.string(),
+    quantity: z.number().int().min(1).max(99),
+  })).optional(),
 })
 
 export async function GET(req: Request) {
@@ -113,6 +117,25 @@ export async function POST(req: Request) {
       seatPrices.push({ seatId, price })
     }
 
+    // Validate and fetch food items
+    let foodTotal = 0
+    const foodPrices: { foodItemId: string; quantity: number; price: number }[] = []
+    if (data.foodItems && data.foodItems.length > 0) {
+      const foodItemIds = data.foodItems.map(f => f.foodItemId)
+      const foodItems = await db.foodItem.findMany({ where: { id: { in: foodItemIds } } })
+      const foodMap = new Map(foodItems.map(f => [f.id, f]))
+
+      for (const fi of data.foodItems) {
+        const item = foodMap.get(fi.foodItemId)
+        if (!item) return NextResponse.json({ error: `Food item ${fi.foodItemId} not found` }, { status: 400 })
+        if (!item.available) return NextResponse.json({ error: `Food item '${item.name}' is not available` }, { status: 400 })
+        foodTotal += item.price * fi.quantity
+        foodPrices.push({ foodItemId: fi.foodItemId, quantity: fi.quantity, price: item.price })
+      }
+    }
+
+    totalAmount += foodTotal
+
     // Apply coupon
     let discountAmount = 0
     if (data.couponCode) {
@@ -121,17 +144,22 @@ export async function POST(req: Request) {
           code: data.couponCode,
           active: true,
           validFrom: { lte: new Date() },
-          OR: [{ validUntil: null }, { validUntil: { gte: new Date() } }],
-          OR: [{ usageLimit: null }, { usageCount: { lt: db.coupon.fields.usageLimit } }],
+          OR: [
+            { validUntil: null },
+            { validUntil: { gte: new Date() } },
+          ],
         },
       })
-      if (coupon && totalAmount >= coupon.minAmount) {
-        if (coupon.type === 'PERCENT') {
-          discountAmount = Math.min(totalAmount * (coupon.value / 100), coupon.maxDiscount || Infinity)
-        } else {
-          discountAmount = coupon.value
+      if (coupon) {
+        const withinUsageLimit = coupon.usageLimit === null || coupon.usageCount < coupon.usageLimit
+        if (withinUsageLimit && totalAmount >= coupon.minAmount) {
+          if (coupon.type === 'PERCENT') {
+            discountAmount = Math.min(totalAmount * (coupon.value / 100), coupon.maxDiscount || Infinity)
+          } else {
+            discountAmount = coupon.value
+          }
+          await db.coupon.update({ where: { id: coupon.id }, data: { usageCount: { increment: 1 } } })
         }
-        await db.coupon.update({ where: { id: coupon.id }, data: { usageCount: { increment: 1 } } })
       }
     }
 
@@ -154,6 +182,7 @@ export async function POST(req: Request) {
           finalAmount,
           channel: data.channel,
           bookingSeats: { create: seatPrices },
+          bookingItems: foodPrices.length > 0 ? { create: foodPrices } : undefined,
           payment: {
             create: {
               method: data.paymentMethod,
@@ -166,6 +195,7 @@ export async function POST(req: Request) {
         include: {
           show: { include: { movie: true, screen: { include: { theater: true } } } },
           bookingSeats: { include: { seat: true } },
+          bookingItems: { include: { foodItem: true } },
           payment: true,
         },
       })

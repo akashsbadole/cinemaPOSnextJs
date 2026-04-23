@@ -14,6 +14,9 @@ interface Show {
   movie: { title: string; format: string; duration: number; language: string }
   screen: { name: string; seats: Seat[]; theater: { name: string } }
 }
+interface FoodItem {
+  id: string; name: string; description?: string; price: number; category: string; imageUrl?: string; available: boolean; sortOrder: number
+}
 
 const PAYMENT_METHODS = [
   { value: 'CASH', label: 'Cash', icon: '💵' },
@@ -21,6 +24,11 @@ const PAYMENT_METHODS = [
   { value: 'CARD', label: 'Card', icon: '💳' },
   { value: 'WALLET', label: 'Wallet', icon: '👛' },
 ]
+
+const FOOD_CATEGORIES = ['POPCORN', 'DRINKS', 'SNACKS', 'COMBO']
+const FOOD_ICONS: Record<string, string> = {
+  POPCORN: '🍿', DRINKS: '🥤', SNACKS: '🍿', COMBO: '🍔',
+}
 
 export default function POSPage() {
   const searchParams = useSearchParams()
@@ -36,6 +44,15 @@ export default function POSPage() {
   const [timerActive, setTimerActive] = useState(false)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    const today = new Date()
+    return today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0')
+  })
+
+  const [foodItems, setFoodItems] = useState<FoodItem[]>([])
+  const [selectedFood, setSelectedFood] = useState<Record<string, number>>({})
+  const [loadingFood, setLoadingFood] = useState(false)
+
   const [couponCode, setCouponCode] = useState('')
   const [couponDiscount, setCouponDiscount] = useState(0)
   const [couponMsg, setCouponMsg] = useState('')
@@ -46,7 +63,7 @@ export default function POSPage() {
   const [customerEmail, setCustomerEmail] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('CASH')
 
-  const [step, setStep] = useState<'select' | 'checkout' | 'done'>('select')
+  const [step, setStep] = useState<'seats' | 'food' | 'checkout' | 'done'>('seats')
   const [booking, setBooking] = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -58,11 +75,13 @@ export default function POSPage() {
       : 'server'
   )
 
-  // Load today's shows
+  const getTodayStr = () => {
+    const t = new Date()
+    return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0')
+  }
+
   useEffect(() => {
-    const today = new Date()
-    const dateStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0')
-    fetch('/api/shows?date=' + dateStr)
+    fetch('/api/shows?date=' + selectedDate)
       .then(r => r.json())
       .then(d => {
         const active = (d.shows || []).filter((s: any) => s.status !== 'CANCELLED' && s.status !== 'COMPLETED')
@@ -70,9 +89,8 @@ export default function POSPage() {
         const initial = preselectedShowId || (active.length > 0 ? active[0].id : '')
         setSelectedShowId(initial)
       })
-  }, [preselectedShowId])
+  }, [selectedDate, preselectedShowId])
 
-  // Load show detail
   useEffect(() => {
     if (!selectedShowId) return
     setLoadingShow(true)
@@ -85,7 +103,6 @@ export default function POSPage() {
       .then(d => { setShowData(d.show); setLoadingShow(false) })
   }, [selectedShowId])
 
-  // Poll seat status every 10s
   useEffect(() => {
     if (!selectedShowId || step === 'done') return
     const poll = setInterval(async () => {
@@ -110,7 +127,6 @@ export default function POSPage() {
     return () => clearInterval(poll)
   }, [selectedShowId, step, selectedSeats])
 
-  // Timer countdown
   useEffect(() => {
     if (!timerActive) return
     timerRef.current = setInterval(() => {
@@ -127,6 +143,16 @@ export default function POSPage() {
     }, 1000)
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [timerActive])
+
+  useEffect(() => {
+    if (step === 'food' || step === 'checkout') {
+      setLoadingFood(true)
+      fetch('/api/food?available=true')
+        .then(r => r.json())
+        .then(d => { setFoodItems(d.items || []); setLoadingFood(false) })
+        .catch(() => setLoadingFood(false))
+    }
+  }, [step])
 
   function showToast(msg: string) {
     setToast({ msg })
@@ -161,10 +187,23 @@ export default function POSPage() {
     }
   }
 
+  function changeFoodQty(foodItemId: string, delta: number) {
+    setSelectedFood(prev => {
+      const current = prev[foodItemId] || 0
+      const next = Math.max(0, Math.min(99, current + delta))
+      if (next === 0) {
+        const nextMap = { ...prev }
+        delete nextMap[foodItemId]
+        return nextMap
+      }
+      return { ...prev, [foodItemId]: next }
+    })
+  }
+
   async function validateCoupon() {
     if (!couponCode.trim()) return
     setCouponLoading(true)
-    const total = selectedSeats.reduce((s, seat) => s + seat.price, 0)
+    const total = seatTotal + foodTotal
     const res = await fetch('/api/coupons/validate', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code: couponCode.toUpperCase(), amount: total }),
@@ -177,6 +216,10 @@ export default function POSPage() {
 
   async function confirmBooking() {
     setSubmitting(true); setError('')
+    const foodItemsList: Array<{ foodItemId: string; quantity: number }> = []
+    for (const [id, qty] of Object.entries(selectedFood)) {
+      if (qty > 0) foodItemsList.push({ foodItemId: id, quantity: qty })
+    }
     const res = await fetch('/api/bookings', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -184,6 +227,7 @@ export default function POSPage() {
         customerName, customerPhone, customerEmail,
         paymentMethod, couponCode: couponCode || undefined,
         channel: 'POS', sessionId: sessionId.current,
+        foodItems: foodItemsList.length > 0 ? foodItemsList : undefined,
       }),
     })
     const data = await res.json()
@@ -196,9 +240,10 @@ export default function POSPage() {
   }
 
   function resetBooking() {
-    setSelectedSeats([]); setStep('select'); setBooking(null)
+    setSelectedSeats([]); setStep('seats'); setBooking(null)
     setCustomerName(''); setCustomerPhone(''); setCustomerEmail('')
     setCouponCode(''); setCouponDiscount(0); setCouponMsg('')
+    setSelectedFood({})
     setTimer(300); setTimerActive(false)
   }
 
@@ -206,24 +251,35 @@ export default function POSPage() {
     ? showData.screen.seats.reduce((acc: Record<string, Seat[]>, s) => { (acc[s.row] = acc[s.row] || []).push(s); return acc }, {})
     : {}
 
-  const total = selectedSeats.reduce((s, seat) => s + seat.price, 0)
-  const finalAmount = Math.max(0, total - couponDiscount)
+  const seatTotal = selectedSeats.reduce((s, seat) => s + seat.price, 0)
+  const foodTotal = Object.entries(selectedFood).reduce((sum, [id, qty]) => {
+    const item = foodItems.find(f => f.id === id)
+    return sum + (item ? item.price * qty : 0)
+  }, 0)
+  const totalAmount = seatTotal + foodTotal
+  const finalAmount = Math.max(0, totalAmount - couponDiscount)
   const timerPct = (timer / 300) * 100
   const timerColor = timerPct < 20 ? 'var(--red)' : timerPct < 50 ? 'var(--accent)' : 'var(--green)'
   const tMins = Math.floor(timer / 60), tSecs = timer % 60
+  const hasFoodSelected = Object.values(selectedFood).some(q => q > 0)
 
   if (step === 'done' && booking) {
     const seatLabels = booking.bookingSeats?.map((bs: any) => `${bs.seat.row}${bs.seat.number}`).join(', ')
+    const foodLines = booking.bookingItems || []
     return (
       <div className="animate-fadeIn" style={{ maxWidth: 520, margin: '0 auto', textAlign: 'center', paddingTop: 40 }}>
         <div style={{ fontSize: 64, marginBottom: 16 }}>🎉</div>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 32, fontWeight: 700, marginBottom: 8 }}>Booking Confirmed!</div>
         <div style={{ color: 'var(--muted)', marginBottom: 32 }}>Ticket issued successfully</div>
         <div className="cp-card" style={{ padding: 24, textAlign: 'left', marginBottom: 20 }}>
-          {[['Booking Ref', booking.bookingRef],['Movie', booking.show?.movie?.title],
+          {[
+            ['Booking Ref', booking.bookingRef],
+            ['Movie', booking.show?.movie?.title],
             ['Show Time', format(new Date(booking.show?.startTime), 'dd MMM yyyy, h:mm a')],
-            ['Screen', booking.show?.screen?.name], ['Seats', seatLabels],
+            ['Screen', booking.show?.screen?.name],
+            ['Seats', seatLabels],
             ['Customer', booking.customerName || 'Walk-in'],
+            ...(foodLines.length > 0 ? [['Food', `${foodLines.length} item${foodLines.length > 1 ? 's' : ''}`]] : []),
             ['Amount Paid', `₹${booking.finalAmount?.toLocaleString('en-IN')}`],
             ['Payment', booking.payment?.method],
           ].map(([l, v]) => (
@@ -236,7 +292,7 @@ export default function POSPage() {
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: 8 }}>
             <a href={`/api/bookings/${booking.bookingRef}/ticket`} target="_blank" rel="noreferrer" className="btn btn-primary">🖨️ Print</a>
-            <select 
+            <select
               onChange={(e) => { if (e.target.value) window.open(`/api/bookings/${booking.bookingRef}/ticket?format=${e.target.value}`, '_blank') }}
               style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer' }}
             >
@@ -260,27 +316,64 @@ export default function POSPage() {
         <div style={{ color: 'var(--muted)', marginTop: 4 }}>Walk-in ticket booking terminal</div>
       </div>
 
-      {/* Show selector */}
-      <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
-        {shows.map(show => (
-          <div key={show.id} onClick={() => { setSelectedShowId(show.id); setStep('select') }}
-            style={{ background: selectedShowId === show.id ? 'var(--accent-dim)' : 'var(--card)', border: `1px solid ${selectedShowId === show.id ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 10, padding: '10px 16px', cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s', minWidth: 160 }}>
-            <div style={{ fontWeight: 600, fontSize: 13 }}>{show.movie.title}</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-              {format(new Date(show.startTime), 'h:mm a')} · {show.movie.format}
-            </div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: selectedShowId === show.id ? 'var(--accent)' : 'var(--muted)', marginTop: 1 }}>{show.screen.name}</div>
+      {/* Step indicator */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        {[['seats', '1. Seats'], ['food', '2. Food'], ['checkout', '3. Checkout']].map(([s, label], idx) => (
+          <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {idx > 0 && <div style={{ width: 32, height: 1, background: 'var(--border)' }} />}
+            <div style={{
+              padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+              background: step === s ? 'var(--accent)' : 'var(--card)',
+              color: step === s ? '#000' : 'var(--muted)',
+              border: `1px solid ${step === s ? 'var(--accent)' : 'var(--border)'}`,
+            }}>{label}</div>
           </div>
         ))}
-        {shows.length === 0 && <div style={{ color: 'var(--muted)', padding: 16 }}>No shows available today</div>}
+      </div>
+
+      {/* Date picker */}
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <label style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>Booking Date</label>
+          <input
+            type="date"
+            value={selectedDate}
+            min={getTodayStr()}
+            onChange={e => { setSelectedDate(e.target.value); setStep('seats'); setSelectedSeats([]) }}
+            style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--text)', fontFamily: 'var(--font-mono)', fontSize: 13, cursor: 'pointer' }}
+          />
+        </div>
+        {selectedDate !== getTodayStr() && (
+          <button onClick={() => { setSelectedDate(getTodayStr()); setStep('seats'); setSelectedSeats([]) }} className="btn btn-ghost btn-sm">Today</button>
+        )}
+      </div>
+
+      {/* Show selector */}
+      <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
+        {shows.map(show => {
+          const showDate = new Date(show.startTime)
+          const isToday = selectedDate === getTodayStr()
+          return (
+            <div key={show.id} onClick={() => { setSelectedShowId(show.id); setStep('seats'); setSelectedSeats([]) }}
+              style={{ background: selectedShowId === show.id ? 'var(--accent-dim)' : 'var(--card)', border: `1px solid ${selectedShowId === show.id ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 10, padding: '10px 16px', cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s', minWidth: 160 }}>
+              <div style={{ fontWeight: 600, fontSize: 13 }}>{show.movie.title}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                {!isToday && <span style={{ color: selectedShowId === show.id ? 'var(--accent)' : 'var(--muted)' }}>{format(showDate, 'dd MMM')} · </span>}
+                {format(new Date(show.startTime), 'h:mm a')} · {show.movie.format}
+              </div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: selectedShowId === show.id ? 'var(--accent)' : 'var(--muted)', marginTop: 1 }}>{show.screen.name}</div>
+            </div>
+          )
+        })}
+        {shows.length === 0 && <div style={{ color: 'var(--muted)', padding: 16 }}>No shows available{selectedDate !== getTodayStr() ? ' on this date' : ' today'}</div>}
       </div>
 
       {loadingShow && <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><div className="spinner" style={{ width: 28, height: 28 }}/></div>}
 
       {showData && !loadingShow && (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 320px', gap: 20, alignItems: 'start' }}>
-          {/* Seat Map / Checkout */}
-          {step === 'select' ? (
+          {/* Main panel: seats / food / checkout */}
+          {step === 'seats' && (
             <div className="cp-card" style={{ padding: 20 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
                 <div>
@@ -325,10 +418,66 @@ export default function POSPage() {
                 ))}
               </div>
             </div>
-          ) : (
+          )}
+
+          {step === 'food' && (
+            <div className="cp-card" style={{ padding: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+                <button onClick={() => setStep('seats')} className="btn btn-ghost btn-sm">← Back</button>
+                <div style={{ fontWeight: 700, fontSize: 16 }}>🍿 Add Food & Beverages</div>
+              </div>
+              {loadingFood ? (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><div className="spinner" style={{ width: 24, height: 24 }}/></div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  {FOOD_CATEGORIES.map(cat => {
+                    const items = foodItems.filter(f => f.category === cat)
+                    if (items.length === 0) return null
+                    return (
+                      <div key={cat}>
+                        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--muted)', fontFamily: 'var(--font-mono)', marginBottom: 10 }}>
+                          {FOOD_ICONS[cat]} {cat}
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(140px,1fr))', gap: 8 }}>
+                          {items.map(item => {
+                            const qty = selectedFood[item.id] || 0
+                            return (
+                              <div key={item.id} style={{ background: 'var(--bg)', borderRadius: 10, padding: 12, border: qty > 0 ? '1px solid var(--accent)' : '1px solid var(--border)', transition: 'all 0.15s' }}>
+                                <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>{item.name}</div>
+                                {item.description && <div style={{ fontSize: 10, color: 'var(--muted)', marginBottom: 6 }}>{item.description}</div>}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent)', fontSize: 13 }}>₹{item.price}</span>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <button onClick={() => changeFoodQty(item.id, -1)} disabled={qty === 0}
+                                      style={{ width: 24, height: 24, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--text)', cursor: qty === 0 ? 'not-allowed' : 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: qty === 0 ? 0.3 : 1 }}>-</button>
+                                    <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, minWidth: 20, textAlign: 'center', fontSize: 13 }}>{qty}</span>
+                                    <button onClick={() => changeFoodQty(item.id, 1)}
+                                      style={{ width: 24, height: 24, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--text)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                                  </div>
+                                </div>
+                                {qty > 0 && <div style={{ fontSize: 10, color: 'var(--accent)', fontFamily: 'var(--font-mono)', marginTop: 4, textAlign: 'right' }}>₹{item.price * qty}</div>}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {foodItems.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--muted)' }}>
+                      <div style={{ fontSize: 32, marginBottom: 8 }}>🍿</div>
+                      <div style={{ fontSize: 13 }}>No food items available</div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === 'checkout' && (
             <div className="cp-card" style={{ padding: 24 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-                <button onClick={() => setStep('select')} className="btn btn-ghost btn-sm">← Back</button>
+                <button onClick={() => setStep('food')} className="btn btn-ghost btn-sm">← Back</button>
                 <div style={{ fontWeight: 700, fontSize: 16 }}>Customer & Payment</div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 14, marginBottom: 20 }}>
@@ -375,39 +524,63 @@ export default function POSPage() {
 
             <div className="cp-card" style={{ padding: 16 }}>
               <div style={{ fontWeight: 600, marginBottom: 14 }}>🎟️ Booking Summary</div>
-              {selectedSeats.length === 0 ? (
+              {selectedSeats.length === 0 && step === 'seats' ? (
                 <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--muted)' }}>
                   <div style={{ fontSize: 28, marginBottom: 8 }}>🪑</div>
                   <div style={{ fontSize: 13 }}>Select seats from the map</div>
                 </div>
               ) : (
                 <>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
-                    {selectedSeats.map(s => (
-                      <span key={s.id} onClick={() => toggleSeat(s)} style={{ background: 'var(--accent)', color: '#000', fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 4, cursor: 'pointer' }}>
-                        {s.row}{s.number} ×
-                      </span>
-                    ))}
-                  </div>
+                  {selectedSeats.length > 0 && (
+                    <>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+                        {selectedSeats.map(s => (
+                          <span key={s.id} onClick={() => step === 'seats' && toggleSeat(s)} style={{ background: 'var(--accent)', color: '#000', fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 4, cursor: step === 'seats' ? 'pointer' : 'default' }}>
+                            {s.row}{s.number} ×
+                          </span>
+                        ))}
+                      </div>
+                      <div style={{ background: 'var(--bg)', borderRadius: 8, padding: 12, marginBottom: 12 }}>
+                        {selectedSeats.map(s => (
+                          <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: 12 }}>
+                            <span style={{ color: 'var(--muted)' }}>{s.row}{s.number} ({s.type})</span>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>₹{s.price}</span>
+                          </div>
+                        ))}
+                        <div style={{ borderTop: '1px solid var(--border)', marginTop: 8, paddingTop: 8, fontSize: 11, color: 'var(--muted)' }}>Seats Subtotal</div>
+                      </div>
+                    </>
+                  )}
+
+                  {Object.keys(selectedFood).length > 0 && (
+                    <div style={{ background: 'var(--bg)', borderRadius: 8, padding: 12, marginBottom: 12 }}>
+                      <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>🍿 Food & Beverages</div>
+                      {Object.entries(selectedFood).filter(([, q]) => q > 0).map(([id, qty]) => {
+                        const item = foodItems.find(f => f.id === id)
+                        if (!item) return null
+                        return (
+                          <div key={id} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: 12 }}>
+                            <span style={{ color: 'var(--muted)' }}>{item.name} ×{qty}</span>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>₹{item.price * qty}</span>
+                          </div>
+                        )
+                      })}
+                      <div style={{ borderTop: '1px solid var(--border)', marginTop: 8, paddingTop: 8, fontSize: 11, color: 'var(--muted)' }}>Food Subtotal: ₹{foodTotal}</div>
+                    </div>
+                  )}
+
                   <div style={{ background: 'var(--bg)', borderRadius: 8, padding: 12, marginBottom: 12 }}>
-                    {selectedSeats.map(s => (
-                      <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: 12 }}>
-                        <span style={{ color: 'var(--muted)' }}>{s.row}{s.number} ({s.type})</span>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>₹{s.price}</span>
+                    {couponDiscount > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--green)', marginBottom: 4 }}>
+                        <span>Coupon Discount</span><span>-₹{couponDiscount}</span>
                       </div>
-                    ))}
-                    <div style={{ borderTop: '1px solid var(--border)', marginTop: 8, paddingTop: 8 }}>
-                      {couponDiscount > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--green)', marginBottom: 4 }}>
-                          <span>Coupon Discount</span><span>-₹{couponDiscount}</span>
-                        </div>
-                      )}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
-                        <span>Total</span>
-                        <span style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--accent)' }}>₹{finalAmount.toLocaleString('en-IN')}</span>
-                      </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
+                      <span>Total</span>
+                      <span style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--accent)' }}>₹{finalAmount.toLocaleString('en-IN')}</span>
                     </div>
                   </div>
+
                   <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                     <input className="cp-input" value={couponCode} onChange={e => { setCouponCode(e.target.value.toUpperCase()); setCouponMsg('') }} placeholder="COUPON CODE" style={{ flex: 1, fontSize: 12 }}/>
                     <button onClick={validateCoupon} disabled={couponLoading} className="btn btn-ghost btn-sm">
@@ -415,8 +588,15 @@ export default function POSPage() {
                     </button>
                   </div>
                   {couponMsg && <div style={{ fontSize: 12, marginBottom: 10, color: couponDiscount > 0 ? 'var(--green)' : 'var(--red)' }}>{couponMsg}</div>}
-                  {step === 'select' && (
-                    <button onClick={() => setStep('checkout')} className="btn btn-primary btn-full">Proceed to Checkout →</button>
+
+                  {step === 'seats' && (
+                    <button onClick={() => setStep('food')} className="btn btn-primary btn-full">Seats Selected → Add Food</button>
+                  )}
+                  {step === 'food' && !hasFoodSelected && (
+                    <button onClick={() => setStep('checkout')} className="btn btn-primary btn-full">Skip, Continue to Checkout →</button>
+                  )}
+                  {step === 'food' && hasFoodSelected && (
+                    <button onClick={() => setStep('checkout')} className="btn btn-primary btn-full">Continue to Checkout →</button>
                   )}
                 </>
               )}

@@ -1,33 +1,37 @@
 // lib/ticket.ts
-import QRCode from 'qrcode'
-import JsBarcode from 'jsbarcode'
-import { jsPDF } from 'jspdf'
+// lib/ticket.ts
+import QRCode from "qrcode";
+import JsBarcode from "jsbarcode";
+import { jsPDF } from "jspdf";
+import { createCanvas } from "canvas";
 
 export interface TicketData {
-  bookingRef: string
-  movieTitle: string
-  showDate: string
-  showTime: string
-  screen: string
-  theater: string
-  seats: string[]
-  customerName: string
-  totalAmount: number
-  format: string
+  bookingRef: string;
+  movieTitle: string;
+  showDate: string;
+  showTime: string;
+  screen: string;
+  theater: string;
+  seats: string[];
+  customerName: string;
+  totalAmount: number;
+  format: string;
+  foodItems?: Array<{ name: string; quantity: number; price: number }>;
+  foodTotal?: number;
 }
 
 export async function generateTicketQR(bookingRef: string): Promise<string> {
-  const data = JSON.stringify({ ref: bookingRef, ts: Date.now() })
+  const data = JSON.stringify({ ref: bookingRef, ts: Date.now() });
   return QRCode.toDataURL(data, {
-    errorCorrectionLevel: 'H',
+    errorCorrectionLevel: "H",
     margin: 1,
-    color: { dark: '#000000', light: '#FFFFFF' },
+    color: { dark: "#000000", light: "#FFFFFF" },
     width: 200,
-  })
+  });
 }
 
 export function generateBarcodeSVG(bookingRef: string): string {
-  const canvas = document.createElement('canvas')
+  const canvas = createCanvas(1, 1);
   JsBarcode(canvas, bookingRef, {
     format: 'CODE128',
     width: 2,
@@ -39,13 +43,15 @@ export function generateBarcodeSVG(bookingRef: string): string {
   return canvas.toDataURL('image/png')
 }
 
-export async function generateBarcodeDataURL(bookingRef: string): Promise<string> {
-  return generateBarcodeSVG(bookingRef)
+export async function generateBarcodeDataURL(
+  bookingRef: string,
+): Promise<string> {
+  return generateBarcodeSVG(bookingRef);
 }
 
 export async function generateTicketHTML(ticket: TicketData): Promise<string> {
-  const qrDataUrl = await generateTicketQR(ticket.bookingRef)
-  const barcodeDataUrl = generateBarcodeSVG(ticket.bookingRef)
+  const qrDataUrl = await generateTicketQR(ticket.bookingRef);
+  const barcodeDataUrl = generateBarcodeSVG(ticket.bookingRef);
 
   return `
 <!DOCTYPE html>
@@ -95,6 +101,10 @@ export async function generateTicketHTML(ticket: TicketData): Promise<string> {
     padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700;
     margin-bottom: 8px;
   }
+.food-section { background: #f8f8f8; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+  .food-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #999; font-weight: 600; margin-bottom: 8px; }
+  .food-item { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; }
+  .food-subtotal { display: flex; justify-content: space-between; padding: 6px 0; border-top: 1px solid #ddd; margin-top: 6px; font-weight: 700; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -134,14 +144,29 @@ export async function generateTicketHTML(ticket: TicketData): Promise<string> {
     <div class="seats-section">
       <div class="seats-label">Seat Numbers</div>
       <div class="seats">
-        ${ticket.seats.map(s => `<span class="seat-tag">${s}</span>`).join('')}
+        ${ticket.seats.map((s) => `<span class="seat-tag">${s}</span>`).join("")}
       </div>
     </div>
+    ${ticket.foodItems && ticket.foodItems.length > 0 ? `
+    <div class="food-section">
+      <div class="food-label">🍿 Food & Beverages</div>
+      ${ticket.foodItems.map(fi => `
+        <div class="food-item">
+          <span>${fi.name} ×${fi.quantity}</span>
+          <span>₹${(fi.price * fi.quantity).toLocaleString("en-IN")}</span>
+        </div>
+      `).join("")}
+      <div class="food-subtotal">
+        <span>Food Total</span>
+        <span>₹${(ticket.foodTotal || 0).toLocaleString("en-IN")}</span>
+      </div>
+    </div>
+    ` : ""}
     <hr class="divider">
     <div class="footer">
       <div>
         <div class="total-label">TOTAL PAID</div>
-        <div class="total">₹${ticket.totalAmount.toLocaleString('en-IN')}</div>
+        <div class="total">₹${ticket.totalAmount.toLocaleString("en-IN")}</div>
       </div>
       <div class="codes-wrap">
         <div class="code-item">
@@ -160,150 +185,189 @@ export async function generateTicketHTML(ticket: TicketData): Promise<string> {
   </div>
 </div>
 </body>
-</html>`
+</html>`;
 }
 
 export async function generateTicketPDF(ticket: TicketData): Promise<Buffer> {
-  const qrDataUrl = await generateTicketQR(ticket.bookingRef)
-  const barcodeDataUrl = generateBarcodeSVG(ticket.bookingRef)
+  const qrDataUrl = await generateTicketQR(ticket.bookingRef);
+  const barcodeDataUrl = generateBarcodeSVG(ticket.bookingRef);
 
   const doc = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4',
-  })
+    orientation: "portrait",
+    unit: "mm",
+    format: "a4",
+  });
 
-  doc.setFillColor(26, 26, 46)
-  doc.rect(0, 0, 210, 45, 'F')
+  doc.setFillColor(26, 26, 46);
+  doc.rect(0, 0, 210, 45, "F");
 
-  doc.setTextColor(232, 160, 32)
-  doc.setFontSize(24)
-  doc.setFont('helvetica', 'bold')
-  doc.text('CinePOS', 15, 20)
+  doc.setTextColor(232, 160, 32);
+  doc.setFontSize(24);
+  doc.setFont("helvetica", "bold");
+  doc.text("CinePOS", 15, 20);
 
-  doc.setTextColor(255, 255, 255)
-  doc.setFontSize(10)
-  doc.setFont('helvetica', 'normal')
-  doc.text(ticket.theater, 15, 30)
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.text(ticket.theater, 15, 30);
 
-  doc.setFontSize(12)
-  doc.setFont('helvetica', 'bold')
-  doc.text(ticket.bookingRef, 195, 20, { align: 'right' })
-  doc.setTextColor(232, 160, 32)
-  doc.setFontSize(9)
-  doc.text('BOOKING CONFIRMED', 195, 28, { align: 'right' })
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text(ticket.bookingRef, 195, 20, { align: "right" });
+  doc.setTextColor(232, 160, 32);
+  doc.setFontSize(9);
+  doc.text("BOOKING CONFIRMED", 195, 28, { align: "right" });
 
-  doc.setTextColor(32, 200, 120)
-  doc.setFontSize(14)
-  doc.setFont('helvetica', 'bold')
-  doc.text('✓ CONFIRMED', 15, 55)
+  doc.setTextColor(32, 200, 120);
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text("✓ CONFIRMED", 15, 55);
 
-  doc.setTextColor(26, 26, 46)
-  doc.setFontSize(18)
-  doc.text(ticket.movieTitle, 15, 65)
+  doc.setTextColor(26, 26, 46);
+  doc.setFontSize(18);
+  doc.text(ticket.movieTitle, 15, 65);
 
-  doc.setTextColor(100, 100, 100)
-  doc.setFontSize(11)
-  doc.setFont('helvetica', 'normal')
-  doc.text(`${ticket.format} • ${ticket.screen}`, 15, 73)
+  doc.setTextColor(100, 100, 100);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.text(`${ticket.format} • ${ticket.screen}`, 15, 73);
 
-  const col1X = 15
-  const col2X = 110
-  let y = 90
+  const col1X = 15;
+  const col2X = 110;
+  let y = 90;
 
-  doc.setTextColor(150, 150, 150)
-  doc.setFontSize(8)
-  doc.text('DATE', col1X, y)
-  doc.text('TIME', col2X, y)
-  y += 6
-  doc.setTextColor(26, 26, 46)
-  doc.setFontSize(12)
-  doc.setFont('helvetica', 'bold')
-  doc.text(ticket.showDate, col1X, y)
-  doc.text(ticket.showTime, col2X, y)
+  doc.setTextColor(150, 150, 150);
+  doc.setFontSize(8);
+  doc.text("DATE", col1X, y);
+  doc.text("TIME", col2X, y);
+  y += 6;
+  doc.setTextColor(26, 26, 46);
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text(ticket.showDate, col1X, y);
+  doc.text(ticket.showTime, col2X, y);
 
-  y += 15
-  doc.setTextColor(150, 150, 150)
-  doc.setFontSize(8)
-  doc.text('CUSTOMER', col1X, y)
-  doc.text('SCREEN', col2X, y)
-  y += 6
-  doc.setTextColor(26, 26, 46)
-  doc.setFontSize(12)
-  doc.setFont('helvetica', 'bold')
-  doc.text(ticket.customerName, col1X, y)
-  doc.text(ticket.screen, col2X, y)
+  y += 15;
+  doc.setTextColor(150, 150, 150);
+  doc.setFontSize(8);
+  doc.text("CUSTOMER", col1X, y);
+  doc.text("SCREEN", col2X, y);
+  y += 6;
+  doc.setTextColor(26, 26, 46);
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text(ticket.customerName, col1X, y);
+  doc.text(ticket.screen, col2X, y);
 
-  y += 20
-  doc.setFillColor(245, 245, 245)
-  doc.roundedRect(15, y, 180, 30, 3, 3, 'F')
+  y += 20;
+  doc.setFillColor(245, 245, 245);
+  doc.roundedRect(15, y, 180, 30, 3, 3, "F");
 
-  doc.setTextColor(150, 150, 150)
-  doc.setFontSize(8)
-  doc.text('SEAT NUMBERS', 20, y + 8)
+  doc.setTextColor(150, 150, 150);
+  doc.setFontSize(8);
+  doc.text("SEAT NUMBERS", 20, y + 8);
 
-  doc.setTextColor(26, 26, 46)
-  doc.setFontSize(14)
-  doc.setFont('helvetica', 'bold')
-  const seatsText = ticket.seats.join('  ')
-  doc.text(seatsText, 20, y + 20)
+  doc.setTextColor(26, 26, 46);
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  const seatsText = ticket.seats.join("  ");
+  doc.text(seatsText, 20, y + 20);
 
-  y += 45
-  doc.setDrawColor(230, 230, 230)
-  doc.setLineDashPattern([3, 3], 0)
-  doc.line(15, y, 195, y)
+  y += 45;
+  if (ticket.foodItems && ticket.foodItems.length > 0) {
+    doc.setFillColor(245, 245, 245);
+    doc.roundedRect(15, y, 180, 10 + ticket.foodItems.length * 6, 3, 3, "F");
+    doc.setTextColor(150, 150, 150);
+    doc.setFontSize(8);
+    doc.text("FOOD & BEVERAGES", 20, y + 8);
+    doc.setTextColor(26, 26, 46);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    let fy = y + 14;
+    for (const fi of ticket.foodItems) {
+      doc.text(`${fi.name} x${fi.quantity}`, 20, fy);
+      doc.text(`₹${(fi.price * fi.quantity).toLocaleString("en-IN")}`, 175, fy, { align: "right" });
+      fy += 6;
+    }
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text(`Food Total`, 20, fy + 2);
+    doc.text(`₹${(ticket.foodTotal || 0).toLocaleString("en-IN")}`, 175, fy + 2, { align: "right" });
+    y += 15 + ticket.foodItems.length * 6;
+    doc.setDrawColor(230, 230, 230);
+    doc.setLineDashPattern([3, 3], 0);
+    doc.line(15, y, 195, y);
+    y += 15;
+  } else {
+    doc.setDrawColor(230, 230, 230);
+    doc.setLineDashPattern([3, 3], 0);
+    doc.line(15, y, 195, y);
+    y += 15;
+  }
+  doc.setFontSize(20);
+  doc.setTextColor(232, 160, 32);
+  doc.text(`₹${ticket.totalAmount.toLocaleString("en-IN")}`, 15, y + 5);
+  doc.setFontSize(8);
+  doc.setTextColor(150, 150, 150);
+  doc.text("TOTAL PAID", 15, y);
 
-  y += 15
-  doc.setFontSize(20)
-  doc.setTextColor(232, 160, 32)
-  doc.text(`₹${ticket.totalAmount.toLocaleString('en-IN')}`, 15, y + 5)
-  doc.setFontSize(8)
-  doc.setTextColor(150, 150, 150)
-  doc.text('TOTAL PAID', 15, y)
+  doc.addImage(qrDataUrl, "PNG", 140, y - 10, 25, 25);
+  doc.setFontSize(7);
+  doc.text("SCAN AT ENTRY", 152.5, y + 18, { align: "center" });
 
-  doc.addImage(qrDataUrl, 'PNG', 140, y - 10, 25, 25)
-  doc.setFontSize(7)
-  doc.text('SCAN AT ENTRY', 152.5, y + 18, { align: 'center' })
+  doc.addImage(barcodeDataUrl, "PNG", 170, y - 5, 25, 15);
+  doc.setFontSize(7);
+  doc.text("BOOKING REF", 182.5, y + 13, { align: "center" });
 
-  doc.addImage(barcodeDataUrl, 'PNG', 170, y - 5, 25, 15)
-  doc.setFontSize(7)
-  doc.text('BOOKING REF', 182.5, y + 13, { align: 'center' })
+  doc.setFontSize(8);
+  doc.setTextColor(180, 180, 180);
+  doc.text(
+    "• Arrive 15 mins before show • No outside food allowed • Ticket non-transferable",
+    105,
+    280,
+    { align: "center" },
+  );
 
-  doc.setFontSize(8)
-  doc.setTextColor(180, 180, 180)
-  doc.text('• Arrive 15 mins before show • No outside food allowed • Ticket non-transferable', 105, 280, { align: 'center' })
-
-  return Buffer.from(doc.output('arraybuffer'))
+  return Buffer.from(doc.output("arraybuffer"));
 }
 
 export function generateThermalTicket(ticket: TicketData): string {
-  const width = 48
-  const center = (text: string) => text.padStart((width + text.length) / 2).padEnd(width)
-  
-  let output = ''
-  output += center('🎬 CinePOS') + '\n'
-  output += '-'.repeat(width) + '\n'
-  output += center(ticket.theater) + '\n'
-  output += '-'.repeat(width) + '\n'
-  output += center(ticket.bookingRef) + '\n'
-  output += center('BOOKING CONFIRMED') + '\n'
-  output += '-'.repeat(width) + '\n'
-  output += ticket.movieTitle + '\n'
-  output += `${ticket.format} • ${ticket.screen}\n`
-  output += '-'.repeat(width) + '\n'
-  output += `Date    : ${ticket.showDate}\n`
-  output += `Time    : ${ticket.showTime}\n`
-  output += `Customer: ${ticket.customerName}\n`
-  output += `Screen  : ${ticket.screen}\n`
-  output += '-'.repeat(width) + '\n'
-  output += `SEATS: ${ticket.seats.join(', ')}\n`
-  output += '-'.repeat(width) + '\n'
-  output += center(`₹${ticket.totalAmount.toLocaleString('en-IN')}`) + '\n'
-  output += center('TOTAL PAID') + '\n'
-  output += '-'.repeat(width) + '\n'
-  output += center('SCAN AT ENTRY') + '\n'
-  output += center('THANK YOU!') + '\n'
-  output += '\n\n\n'
+  const width = 48;
+  const center = (text: string) =>
+    text.padStart((width + text.length) / 2).padEnd(width);
 
-  return output
+  let output = "";
+  output += center("🎬 CinePOS") + "\n";
+  output += "-".repeat(width) + "\n";
+  output += center(ticket.theater) + "\n";
+  output += "-".repeat(width) + "\n";
+  output += center(ticket.bookingRef) + "\n";
+  output += center("BOOKING CONFIRMED") + "\n";
+  output += "-".repeat(width) + "\n";
+  output += ticket.movieTitle + "\n";
+  output += `${ticket.format} • ${ticket.screen}\n`;
+  output += "-".repeat(width) + "\n";
+  output += `Date    : ${ticket.showDate}\n`;
+  output += `Time    : ${ticket.showTime}\n`;
+  output += `Customer: ${ticket.customerName}\n`;
+  output += `Screen  : ${ticket.screen}\n`;
+  output += "-".repeat(width) + "\n";
+  output += `SEATS: ${ticket.seats.join(", ")}\n`;
+  if (ticket.foodItems && ticket.foodItems.length > 0) {
+    output += "-".repeat(width) + "\n";
+    output += "FOOD & BEVERAGES\n";
+    for (const fi of ticket.foodItems) {
+      output += `${fi.name} x${fi.quantity}  ₹${(fi.price * fi.quantity).toLocaleString("en-IN")}\n`;
+    }
+    output += `Food Total: ₹${(ticket.foodTotal || 0).toLocaleString("en-IN")}\n`;
+  }
+  output += "-".repeat(width) + "\n";
+  output += center(`₹${ticket.totalAmount.toLocaleString("en-IN")}`) + "\n";
+  output += center("TOTAL PAID") + "\n";
+  output += "-".repeat(width) + "\n";
+  output += center("SCAN AT ENTRY") + "\n";
+  output += center("THANK YOU!") + "\n";
+  output += "\n\n\n";
+
+  return output;
 }
