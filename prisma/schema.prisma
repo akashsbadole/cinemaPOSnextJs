@@ -20,9 +20,15 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  bookings  Booking[]
+  bookings  Booking[] @relation("BookingUser")
   sessions  Session[]
   theater   Theater? @relation(fields: [theaterId], references: [id])
+  events    Event[] @relation("UserEvents")
+  ticketResales TicketResale[] @relation("TicketResaleSeller")
+  reviews   Review[] @relation("ReviewUser")
+  waitlist  Waitlist[] @relation("WaitlistUser")
+  eventOrganizer EventOrganizer? @relation("EventOrganizerProfile")
+  resalesBuyer TicketResale[] @relation("TicketResaleBuyer")
 
   @@map("users")
 }
@@ -149,7 +155,7 @@ model Booking {
   id             String   @id @default(cuid())
   bookingRef     String   @unique
   userId         String?
-  showId         String
+  showId         String?
   customerName   String?
   customerEmail  String?
   customerPhone  String?
@@ -162,12 +168,16 @@ model Booking {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  user           User?         @relation(fields: [userId], references: [id])
-  show           Show          @relation(fields: [showId], references: [id])
+  user           User?         @relation("BookingUser", fields: [userId], references: [id])
+  show           Show?         @relation(fields: [showId], references: [id])
   bookingSeats   BookingSeat[]
   bookingItems   BookingItem[]
-  payment        Payment?
-  cancellation   Cancellation?
+  payment        Payment?      @relation("BookingPayment")
+  cancellation   Cancellation? @relation("BookingCancellation")
+  event          Event?        @relation("BookingEvent", fields: [eventId], references: [id])
+  eventId        String?
+  tickets        Ticket[]      @relation("BookingTicket")
+  ticketResales  TicketResale[] @relation("TicketResaleOriginalBooking")
 
   @@map("bookings")
 }
@@ -196,7 +206,7 @@ model Payment {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  booking       Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  booking       Booking  @relation("BookingPayment", fields: [bookingId], references: [id])
 
   @@map("payments")
 }
@@ -210,7 +220,7 @@ model Cancellation {
   status       String   @default("PENDING")
   cancelledAt  DateTime @default(now())
 
-  booking      Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  booking      Booking  @relation("BookingCancellation", fields: [bookingId], references: [id])
 
   @@map("cancellations")
 }
@@ -284,4 +294,233 @@ model SystemSetting {
   value String
 
   @@map("system_settings")
+}
+
+// Event Management Models
+model Event {
+  id            String   @id @default(cuid())
+  title         String
+  description   String
+  category      String   // Concert, Sports, Conference, Festival, Theater, Comedy
+  eventType     String   // Single-day, Multi-day, Recurring
+  startDate     DateTime
+  endDate       DateTime
+  venueId       String
+  organizerId   String
+  posterUrl     String?
+  bannerUrl     String?
+  status        String   @default("DRAFT") // DRAFT, PUBLISHED, LIVE, COMPLETED, CANCELLED
+  capacity      Int
+  refundPolicy  String   // Full, Partial, None
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  venue         Venue    @relation(fields: [venueId], references: [id])
+  organizer     User     @relation("UserEvents", fields: [organizerId], references: [id])
+  ticketTiers   TicketTier[]
+  bookings      Booking[] @relation("BookingEvent")
+  reviews       Review[] @relation("EventReview")
+  ticketLocks   TicketLock[] @relation("EventTicketLocks")
+  waitList      Waitlist[] @relation("EventWaitlist")
+  tickets       Ticket[] @relation("EventTickets")
+
+  @@map("events")
+}
+
+model Venue {
+  id          String   @id @default(cuid())
+  name        String
+  location    String
+  address     String
+  city        String
+  state       String
+  country     String
+  capacity    Int
+  createdAt   DateTime @default(now())
+
+  sections    VenueSection[]
+  events      Event[]
+  amenities   VenueAmenity[]
+  accessibility VenueAccessibility[]
+
+  @@map("venues")
+}
+
+model VenueAmenity {
+  id        String   @id @default(cuid())
+  name      String   // WiFi, Parking, Restrooms, etc.
+  venue     Venue    @relation(fields: [venueId], references: [id])
+  venueId   String
+  createdAt DateTime @default(now())
+
+  @@map("venue_amenities")
+}
+
+model VenueAccessibility {
+  id        String   @id @default(cuid())
+  name      String   // Wheelchair, Elevator, etc.
+  venue     Venue    @relation(fields: [venueId], references: [id])
+  venueId   String
+  createdAt DateTime @default(now())
+
+  @@map("venue_accessibility")
+}
+
+model VenueSection {
+  id        String   @id @default(cuid())
+  venueId   String
+  name      String   // VIP, General, Balcony, Floor, etc.
+  capacity  Int
+  coordX    Float?
+  coordY    Float?
+
+  venue     Venue    @relation(fields: [venueId], references: [id])
+  ticketTiers TicketTier[]
+
+  @@map("venue_sections")
+}
+
+model TicketTier {
+  id            String   @id @default(cuid())
+  eventId       String
+  sectionId     String?
+  name          String   // VIP, Premium, General, Early Bird
+  basePrice     Float
+  currentPrice  Float    // with surge pricing
+  totalCapacity Int
+  soldCount     Int      @default(0)
+  availableCount Int
+  createdAt     DateTime @default(now())
+  availableFrom DateTime?
+  availableUntil DateTime?
+
+  event         Event    @relation(fields: [eventId], references: [id])
+  section       VenueSection? @relation(fields: [sectionId], references: [id])
+  ticketLocks   TicketLock[]
+  features      TierFeature[]
+  tickets       Ticket[] @relation("TicketTierTickets")
+  waitlist      Waitlist[] @relation("TicketTierWaitlist")
+
+  @@map("ticket_tiers")
+}
+
+model TierFeature {
+  id        String   @id @default(cuid())
+  name      String   // Early entry, Merchandise, Meet & Greet, etc.
+  tier      TicketTier @relation(fields: [tierId], references: [id])
+  tierId    String
+  createdAt DateTime @default(now())
+
+  @@map("tier_features")
+}
+
+model TicketLock {
+  id        String   @id @default(cuid())
+  eventId   String
+  ticketTierId String
+  quantity  Int      // for standing room
+  sessionId String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  event     Event    @relation("EventTicketLocks", fields: [eventId], references: [id])
+  ticketTier TicketTier @relation(fields: [ticketTierId], references: [id])
+
+  @@unique([eventId, ticketTierId, sessionId])
+  @@map("ticket_locks")
+}
+
+model Waitlist {
+  id        String   @id @default(cuid())
+  eventId   String
+  customerId String
+  ticketTierId String
+  quantity  Int
+  priority  Int      // FIFO order
+  status    String   @default("WAITING") // WAITING, NOTIFIED, CONVERTED, EXPIRED
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  convertedAt DateTime?
+
+  event     Event    @relation("EventWaitlist", fields: [eventId], references: [id])
+  customer  User     @relation("WaitlistUser", fields: [customerId], references: [id])
+  ticketTier TicketTier @relation("TicketTierWaitlist", fields: [ticketTierId], references: [id])
+
+  @@map("waitlist")
+}
+
+model TicketResale {
+  id              String   @id @default(cuid())
+  originalBookingId String
+  sellerId        String
+  buyerId         String?
+  ticketId        String
+  resalePrice     Float
+  platformCommission Float
+  sellerProceeds  Float
+  status          String   @default("LISTED") // LISTED, SOLD, CANCELLED
+  listedAt        DateTime @default(now())
+  soldAt          DateTime?
+
+  originalBooking Booking @relation("TicketResaleOriginalBooking", fields: [originalBookingId], references: [id])
+  seller          User     @relation("TicketResaleSeller", fields: [sellerId], references: [id])
+  buyer           User?    @relation("TicketResaleBuyer", fields: [buyerId], references: [id])
+  ticket          Ticket   @relation("TicketResales", fields: [ticketId], references: [id])
+
+  @@map("ticket_resales")
+}
+
+model Ticket {
+  id          String   @id @default(cuid())
+  bookingId   String
+  eventId     String
+  ticketTierId String
+  ticketNumber String   // unique per event
+  qrCode      String
+  barcode     String
+  status      String   @default("ACTIVE") // ACTIVE, USED, TRANSFERRED, REFUNDED
+  customerName String
+  customerEmail String
+  customerPhone String
+  originalPrice Float   // price at which ticket was originally purchased
+  resaleCount Int      @default(0)
+  entryTime   DateTime?
+  createdAt   DateTime @default(now())
+
+  booking     Booking  @relation("BookingTicket", fields: [bookingId], references: [id])
+  event       Event    @relation("EventTickets", fields: [eventId], references: [id])
+  ticketTier  TicketTier @relation("TicketTierTickets", fields: [ticketTierId], references: [id])
+  resales     TicketResale[] @relation("TicketResales")
+
+  @@map("tickets")
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  eventId   String
+  customerId String
+  rating    Int      // 1-5
+  comment   String?
+  createdAt DateTime @default(now())
+
+  event     Event    @relation("EventReview", fields: [eventId], references: [id])
+  customer  User     @relation("ReviewUser", fields: [customerId], references: [id])
+
+  @@map("reviews")
+}
+
+model EventOrganizer {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  companyName String?
+  description String?
+  website     String?
+  phone       String?
+  bankAccount String?  // for payouts
+  commissionRate Float? // platform takes %
+  createdAt   DateTime @default(now())
+
+  user        User     @relation("EventOrganizerProfile", fields: [userId], references: [id])
+
+  @@map("event_organizers")
 }

@@ -74,6 +74,9 @@ export const ROLE_HIERARCHY: Record<string, number> = {
   THEATER_OWNER: 4,
   VENDOR: 3,
   MANAGER: 2,
+  ORGANIZER: 3,       // Added
+  VENUE_MANAGER: 2,   // Added
+  TICKET_CHECKER: 1,  // Added
   CLERK: 1,
   CUSTOMER: 0,
 }

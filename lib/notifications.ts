@@ -332,3 +332,141 @@ export async function sendShowReminder(data: BookingNotificationData) {
 
   return results
 }
+
+// Resale confirmation notifications
+export interface ResaleNotificationData {
+  buyerName: string
+  sellerName: string
+  ticketNumber: string
+  eventTitle: string
+  eventDate: string
+  resalePrice: number
+  sellerProceeds: number
+  buyerEmail?: string
+  buyerPhone?: string
+}
+
+export async function sendResaleConfirmation(data: ResaleNotificationData) {
+  const smsMessage = `CinePOS: You purchased ticket ${data.ticketNumber} for ${data.eventTitle} on ${data.eventDate}. Amount: ₹${data.resalePrice}. Seller: ${data.sellerName}`
+
+  const emailHtml = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 24px; color: white; text-align: center;">
+        <h1 style="margin: 0; color: #E8A020;">🎟️ CinePOS Resale</h1>
+        <p style="margin: 8px 0 0; color: #aaa;">Ticket Purchased</p>
+      </div>
+      <div style="padding: 24px; background: #f8f8f8;">
+        <div style="background: white; padding: 20px; border-radius: 12px;">
+          <div style="color: #20C878; font-size: 24px; margin-bottom: 12px;">✓ Resale Successful</div>
+          <p style="margin: 0 0 16px; color: #666;">Hi <strong>${data.buyerName}</strong>, you have successfully purchased a resale ticket!</p>
+          
+          <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+            <p style="margin: 0 0 8px;"><strong>Ticket #:</strong> ${data.ticketNumber}</p>
+            <p style="margin: 0 0 8px;"><strong>Event:</strong> ${data.eventTitle}</p>
+            <p style="margin: 0 0 8px;"><strong>Date:</strong> ${data.eventDate}</p>
+            <p style="margin: 0 0 8px;"><strong>Amount Paid:</strong> <span style="color: #E8A020; font-size: 18px;">₹${data.resalePrice}</span></p>
+          </div>
+
+          <p style="color: #666; margin-top: 16px;">The seller will receive ₹${data.sellerProceeds} after platform commission. Please arrive before the event and carry your ticket.</p>
+        </div>
+      </div>
+    </div>
+  `
+
+  const results = []
+
+  if (data.buyerPhone) {
+    const smsResult = await sendSMS({ to: data.buyerPhone, message: smsMessage })
+    await logNotification('RESALE_PURCHASE', 'sms', data.buyerPhone, 'Ticket Purchased', smsMessage, smsResult.success ? 'SENT' : 'FAILED', smsResult.error)
+    results.push({ channel: 'sms', ...smsResult })
+  }
+
+  if (data.buyerEmail) {
+    const emailResult = await sendEmail({
+      to: data.buyerEmail,
+      subject: `CinePOS: Resale Ticket Purchase Confirmed`,
+      html: emailHtml,
+    })
+    await logNotification('RESALE_PURCHASE', 'email', data.buyerEmail, 'Ticket Purchased', smsMessage, emailResult.success ? 'SENT' : 'FAILED', emailResult.error)
+    results.push({ channel: 'email', ...emailResult })
+  }
+
+  return results
+}
+
+// Event booking confirmation notification
+export interface EventBookingNotificationData {
+  bookingRef: string
+  customerName: string
+  customerPhone: string
+  customerEmail?: string
+  eventTitle: string
+  eventDate: string
+  venueName: string
+  tierName: string
+  quantity: number
+  ticketNumbers: string[] // list of ticket numbers
+  totalAmount: number
+  ticketPdf?: string // base64
+}
+
+export async function sendEventBookingConfirmation(data: EventBookingNotificationData) {
+  const smsMessage = `CinePOS: Your booking ${data.bookingRef} is confirmed! Event: ${data.eventTitle}, Date: ${data.eventDate}, Venue: ${data.venueName}, Tier: ${data.tierName}, Tickets: ${data.quantity}, Amount: ₹${data.totalAmount}.`
+
+  const emailHtml = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 24px; color: white; text-align: center;">
+        <h1 style="margin: 0; color: #E8A020;">🎟️ CinePOS Events</h1>
+        <p style="margin: 8px 0 0; color: #aaa;">Booking Confirmation</p>
+      </div>
+      <div style="padding: 24px; background: #f8f8f8;">
+        <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+          <div style="color: #20C878; font-size: 24px; margin-bottom: 12px;">✓ Booking Confirmed</div>
+          <p style="margin: 0 0 16px; color: #666;">Dear <strong>${data.customerName}</strong>, your event booking has been confirmed!</p>
+          
+          <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+            <p style="margin: 0 0 8px;"><strong>Booking Ref:</strong> ${data.bookingRef}</p>
+            <p style="margin: 0 0 8px;"><strong>Event:</strong> ${data.eventTitle}</p>
+            <p style="margin: 0 0 8px;"><strong>Date:</strong> ${data.eventDate}</p>
+            <p style="margin: 0 0 8px;"><strong>Venue:</strong> ${data.venueName}</p>
+            <p style="margin: 0 0 8px;"><strong>Tier:</strong> ${data.tierName}</p>
+            <p style="margin: 0 0 8px;"><strong>Tickets:</strong> ${data.ticketNumbers.join(', ')}</p>
+            <p style="margin: 0;"><strong>Amount Paid:</strong> <span style="color: #E8A020; font-size: 18px;">₹${data.totalAmount}</span></p>
+          </div>
+        </div>
+        
+        <p style="color: #999; font-size: 12px; text-align: center; margin: 0;">
+          Please arrive 15 minutes before the event. Have a great time!<br>
+          © CinePOS - Event Ticketing
+        </p>
+      </div>
+    </div>
+  `
+
+  const results = []
+
+  if (data.customerPhone) {
+    const smsResult = await sendSMS({ to: data.customerPhone, message: smsMessage })
+    await logNotification('BOOKING_CONFIRM', 'sms', data.customerPhone, 'Event Booking Confirmed', smsMessage, smsResult.success ? 'SENT' : 'FAILED', smsResult.error)
+    results.push({ channel: 'sms', ...smsResult })
+  }
+
+  if (data.customerEmail) {
+    const attachments = data.ticketPdf ? [{
+      filename: `tickets-${data.bookingRef}.pdf`,
+      content: data.ticketPdf,
+      type: 'application/pdf',
+    }] : undefined
+
+    const emailResult = await sendEmail({
+      to: data.customerEmail,
+      subject: `CinePOS: Event Booking Confirmed - ${data.bookingRef}`,
+      html: emailHtml,
+      attachments,
+    })
+    await logNotification('BOOKING_CONFIRM', 'email', data.customerEmail, 'Event Booking Confirmed', smsMessage, emailResult.success ? 'SENT' : 'FAILED', emailResult.error)
+    results.push({ channel: 'email', ...emailResult })
+  }
+
+  return results
+}
