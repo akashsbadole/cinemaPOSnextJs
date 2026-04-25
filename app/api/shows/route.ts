@@ -72,13 +72,21 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const user = await getSession()
-  if (!user || !hasPermission(user.role, 'MANAGER')) {
+  if (!user || !hasPermission(user.role, 'VENDOR')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
   }
   try {
     const body = await req.json()
     const data = schema.parse(body)
     const startTime = new Date(data.startTime)
+
+    // Vendor check: can only create show for their theater's screens
+    if (user.role === 'VENDOR') {
+      const screen = await db.screen.findFirst({
+        where: { id: data.screenId, theaterId: user.theaterId || '' }
+      })
+      if (!screen) return NextResponse.json({ error: 'Unauthorized for this screen' }, { status: 403 })
+    }
 
     const movie = await db.movie.findUnique({ where: { id: data.movieId } })
     if (!movie) return NextResponse.json({ error: 'Movie not found' }, { status: 404 })

@@ -1,16 +1,89 @@
 'use client'
 // app/dashboard/settings/page.tsx
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function SettingsPage() {
   const [toast, setToast] = useState('')
+  const [settings, setSettings] = useState<any>({
+    RAZORPAY_ENABLED: 'false',
+    RAZORPAY_KEY_ID: '',
+    RAZORPAY_KEY_SECRET: '',
+  })
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(data => {
+        setSettings(prev => ({ ...prev, ...data }))
+        setLoading(false)
+      })
+  }, [])
+
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
+
+  async function handleSave() {
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+      })
+      if (res.ok) showToast('Settings saved!')
+      else throw new Error('Failed to save')
+    } catch (err) {
+      showToast('Error saving settings')
+    }
+  }
+
+  if (loading) return <div>Loading...</div>
 
   return (
     <div className="animate-fadeIn" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 700 }}>Settings</div>
         <div style={{ color: 'var(--muted)', marginTop: 2 }}>System configuration and preferences</div>
+      </div>
+
+      <div className="cp-card" style={{ overflow: 'hidden' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: 14 }}>💳 Payment Settings (Razorpay)</div>
+        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <input
+              type="checkbox"
+              id="razorpay-enabled"
+              checked={settings.RAZORPAY_ENABLED === 'true'}
+              onChange={e => setSettings({ ...settings, RAZORPAY_ENABLED: String(e.target.checked) })}
+            />
+            <label htmlFor="razorpay-enabled" style={{ fontSize: 13, fontWeight: 500 }}>Enable Razorpay Online Booking</label>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--muted)', fontFamily: 'var(--font-mono)', marginBottom: 6 }}>Razorpay Key ID</label>
+              <input
+                className="cp-input"
+                type="text"
+                placeholder="rzp_test_..."
+                value={settings.RAZORPAY_KEY_ID}
+                onChange={e => setSettings({ ...settings, RAZORPAY_KEY_ID: e.target.value })}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--muted)', fontFamily: 'var(--font-mono)', marginBottom: 6 }}>Razorpay Key Secret</label>
+              <input
+                className="cp-input"
+                type="password"
+                placeholder="••••••••••••"
+                value={settings.RAZORPAY_KEY_SECRET}
+                onChange={e => setSettings({ ...settings, RAZORPAY_KEY_SECRET: e.target.value })}
+              />
+            </div>
+          </div>
+        </div>
+        <div style={{ padding: '0 20px 20px' }}>
+          <button className="btn btn-primary btn-sm" onClick={handleSave}>Save Changes</button>
+        </div>
       </div>
 
       {[
@@ -32,15 +105,6 @@ export default function SettingsPage() {
             { label: 'Cancellation Window (hours)', placeholder: '1', type: 'number' },
           ]
         },
-        {
-          title: '📩 Notification Settings',
-          fields: [
-            { label: 'SMS API Key (Fast2SMS)', placeholder: 'Your API key...', type: 'password' },
-            { label: 'Email (Resend API Key)', placeholder: 'Your Resend key...', type: 'password' },
-            { label: 'WhatsApp Phone Number ID', placeholder: 'Meta WABA Phone ID', type: 'text' },
-            { label: 'WhatsApp Access Token', placeholder: 'Meta access token...', type: 'password' },
-          ]
-        },
       ].map(section => (
         <div key={section.title} className="cp-card" style={{ overflow: 'hidden' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: 14 }}>{section.title}</div>
@@ -57,26 +121,6 @@ export default function SettingsPage() {
           </div>
         </div>
       ))}
-
-      {/* App info */}
-      <div className="cp-card" style={{ padding: 20 }}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>ℹ️ Application Info</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
-          {[
-            ['Version', 'v1.0.0'],
-            ['Database', 'SQLite (Local)'],
-            ['Runtime', 'Next.js 14'],
-            ['Desktop', 'Tauri v1.5'],
-            ['ORM', 'Prisma 5'],
-            ['Auth', 'JWT / bcrypt'],
-          ].map(([k, v]) => (
-            <div key={k} style={{ background: 'var(--bg)', borderRadius: 8, padding: 12, border: '1px solid var(--border)' }}>
-              <div style={{ fontSize: 10, color: 'var(--muted)', fontFamily: 'var(--font-mono)', marginBottom: 4, letterSpacing: 1, textTransform: 'uppercase' }}>{k}</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--accent)', fontSize: 13 }}>{v}</div>
-            </div>
-          ))}
-        </div>
-      </div>
 
       {toast && <div className="animate-slideIn" style={{ position: 'fixed', bottom: 24, right: 24, background: 'var(--card)', border: '1px solid var(--green)', borderRadius: 10, padding: '12px 18px', fontSize: 13, fontWeight: 500, zIndex: 200 }}>✅ {toast}</div>}
     </div>
