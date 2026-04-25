@@ -1,0 +1,47 @@
+{
+  "specName": "event-ticketing-platform",
+  "specType": "feature",
+  "workflowType": "requirements-first",
+  "status": "active",
+  "createdAt": "2026-04-26",
+  "description": "Event Ticketing Platform - Extend CinePOS into multi-purpose event ticketing system",
+  "phases": {
+    "phase1": {
+      "name": "Core Event System",
+      "duration": "2 weeks",
+      "status": "not_started",
+      "tasks": 12
+    },
+    "phase2": {
+      "name": "Advanced Features",
+      "duration": "2 weeks",
+      "status": "not_started",
+      "tasks": 8
+    },
+    "phase3": {
+      "name": "Polish & Scale",
+      "duration": "2 weeks",
+      "status": "not_started",
+      "tasks": 12
+    }
+  },
+  "reuseFromCinePOS": [
+    "lib/auth.ts - JWT authentication",
+    "lib/db.ts - Prisma client",
+    "lib/notifications.ts - SMS, email, WhatsApp",
+    "lib/ticket.ts - QR, barcode, PDF generation",
+    "app/api/coupons/route.ts - Promo code validation",
+    "app/api/reports/route.ts - Analytics framework",
+    "lib/seat-lock.ts - Adapt for ticket locking"
+  ],
+  "newComponents": [
+    "lib/ticket-lock.ts - Quantity-based ticket locking",
+    "lib/pricing-engine.ts - Dynamic pricing",
+    "lib/waitlist-queue.ts - Waitlist management",
+    "lib/resale-handler.ts - Resale marketplace",
+    "lib/ticket-validator.ts - Entry validation",
+    "lib/tier-manager.ts - Tier management"
+  ],
+  "estimatedEffort": "70-80% code reuse",
+  "timeline": "6 weeks to MVP"
+}

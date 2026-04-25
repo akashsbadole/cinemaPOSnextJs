@@ -10,6 +10,11 @@ interface SendEmailParams {
   to: string
   subject: string
   html: string
+  attachments?: Array<{
+    filename: string
+    content: string // base64
+    type: string
+  }>
 }
 
 export async function sendSMS({ to, message }: SendSMSParams): Promise<{ success: boolean; messageId?: string; error?: string }> {
@@ -44,7 +49,41 @@ export async function sendSMS({ to, message }: SendSMSParams): Promise<{ success
   }
 }
 
-export async function sendEmail({ to, subject, html }: SendEmailParams): Promise<{ success: boolean; messageId?: string; error?: string }> {
+export async function sendWhatsApp({ to, message }: SendSMSParams): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const apiKey = process.env.WHATSAPP_API_KEY
+  const webhookUrl = process.env.WHATSAPP_WEBHOOK_URL
+  if (!apiKey && !webhookUrl) {
+    console.log('[WhatsApp] No API key configured, skipping')
+    return { success: false, error: 'WhatsApp not configured' }
+  }
+
+  try {
+    // Use WhatsApp Business API (Meta)
+    const response = await fetch('https://graph.facebook.com/v18.0/' + process.env.WHATSAPP_PHONE_ID + '/messages', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: to.replace(/\D/g, '').slice(-10),
+        type: 'text',
+        text: { body: message },
+      }),
+    })
+
+    const data = await response.json()
+    if (data.messages?.[0]?.id) {
+      return { success: true, messageId: data.messages[0].id }
+    }
+    return { success: false, error: data.error?.message || 'WhatsApp failed' }
+  } catch (error) {
+    return { success: false, error: String(error) }
+  }
+}
+
+export async function sendEmail({ to, subject, html, attachments }: SendEmailParams): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const apiKey = process.env.RESEND_API_KEY
   if (!apiKey) {
     console.log('[Email] No API key configured, skipping')
@@ -52,18 +91,27 @@ export async function sendEmail({ to, subject, html }: SendEmailParams): Promise
   }
 
   try {
+    const payload: any = {
+      from: 'CinePOS <noreply@cinepos.app>',
+      to,
+      subject,
+      html,
+    }
+    
+    if (attachments && attachments.length > 0) {
+      payload.attachments = attachments.map(att => ({
+        filename: att.filename,
+        content: att.content,
+      }))
+    }
+
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        from: 'CinePOS <noreply@cinepos.app>',
-        to,
-        subject,
-        html,
-      }),
+      body: JSON.stringify(payload),
     })
 
     const data = await response.json()
@@ -109,9 +157,21 @@ interface BookingNotificationData {
   screen: string
   seats: string[]
   totalAmount: number
+  ticketPdf?: string // base64 encoded PDF
 }
 
 export async function sendBookingConfirmation(data: BookingNotificationData) {
+  // Get notification settings
+  const settings = await db.systemSetting.findMany()
+  const settingMap = settings.reduce((acc: Record<string,string>, s: any) => {
+    acc[s.key] = s.value
+    return acc
+  }, {})
+
+  const smsEnabled = settingMap.SMS_ENABLED !== 'false'
+  const emailEnabled = settingMap.EMAIL_ENABLED !== 'false'
+  const waEnabled = settingMap.WHATSAPP_ENABLED === 'true'
+
   const smsMessage = `CinePOS: Your booking ${data.bookingRef} is confirmed! Movie: ${data.movieTitle}, Show: ${data.showDate} ${data.showTime}, Seats: ${data.seats.join(', ')}, Amount: ₹${data.totalAmount}. Enjoy your movie!`
 
   const emailHtml = `
@@ -145,17 +205,31 @@ export async function sendBookingConfirmation(data: BookingNotificationData) {
 
   const results = []
 
-  if (data.customerPhone) {
+  if (data.customerPhone && smsEnabled) {
     const smsResult = await sendSMS({ to: data.customerPhone, message: smsMessage })
     await logNotification('BOOKING_CONFIRM', 'sms', data.customerPhone, 'Booking Confirmed', smsMessage, smsResult.success ? 'SENT' : 'FAILED', smsResult.error)
     results.push({ channel: 'sms', ...smsResult })
   }
+  
+  // Send WhatsApp notification if enabled
+  if (data.customerPhone && waEnabled) {
+    const waResult = await sendWhatsApp({ to: data.customerPhone, message: smsMessage })
+    await logNotification('BOOKING_CONFIRM', 'whatsapp', data.customerPhone, 'Booking Confirmed', smsMessage, waResult.success ? 'SENT' : 'FAILED', waResult.error)
+    results.push({ channel: 'whatsapp', ...waResult })
+  }
 
-  if (data.customerEmail) {
+  if (data.customerEmail && emailEnabled) {
+    const attachments = data.ticketPdf ? [{
+      filename: `ticket-${data.bookingRef}.pdf`,
+      content: data.ticketPdf,
+      type: 'application/pdf',
+    }] : undefined
+    
     const emailResult = await sendEmail({
       to: data.customerEmail,
       subject: `CinePOS: Booking Confirmed - ${data.bookingRef}`,
       html: emailHtml,
+      attachments,
     })
     await logNotification('BOOKING_CONFIRM', 'email', data.customerEmail, 'Booking Confirmed', smsMessage, emailResult.success ? 'SENT' : 'FAILED', emailResult.error)
     results.push({ channel: 'email', ...emailResult })

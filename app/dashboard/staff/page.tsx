@@ -2,6 +2,8 @@
 // app/dashboard/staff/page.tsx
 import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
+import { useI18n } from '@/lib/i18n'
+import { useUIStore } from '@/lib/store'
 
 const ROLE_COLORS: Record<string, string> = { SUPER_ADMIN: 'var(--accent)', THEATER_OWNER: 'var(--purple)', MANAGER: 'var(--blue)', CLERK: 'var(--green)' }
 const EMPTY = { name: '', email: '', password: '', role: 'CLERK', phone: '' }
@@ -14,6 +16,8 @@ export default function StaffPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
+  const t = useI18n()
+  const { language, setLanguage } = useUIStore()
 
   const load = () => { setLoading(true); fetch('/api/staff').then(r => r.json()).then(d => { setStaff(d.staff || []); setLoading(false) }) }
   useEffect(() => { load() }, [])

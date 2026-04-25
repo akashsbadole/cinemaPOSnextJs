@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import Link from 'next/link'
+import { useI18n } from '@/lib/i18n'
+import { useUIStore } from '@/lib/store'
 
 export default function BookingsPage() {
   const [bookings, setBookings] = useState<any[]>([])
@@ -18,6 +20,8 @@ export default function BookingsPage() {
   const [cancelReason, setCancelReason] = useState('')
   const [showCancel, setShowCancel] = useState(false)
   const [toast, setToast] = useState('')
+  const t = useI18n()
+  const { language, setLanguage } = useUIStore()
 
   const load = () => {
     setLoading(true)

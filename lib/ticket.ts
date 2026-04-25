@@ -192,143 +192,109 @@ export async function generateTicketPDF(ticket: TicketData): Promise<Buffer> {
   const qrDataUrl = await generateTicketQR(ticket.bookingRef);
   const barcodeDataUrl = generateBarcodeSVG(ticket.bookingRef);
 
-  const doc = new jsPDF({
-    orientation: "portrait",
-    unit: "mm",
-    format: "a4",
-  });
+  // Custom ticket size
+  const width = 58;
+  const height = 100;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [width, height] });
 
+  // Header
   doc.setFillColor(26, 26, 46);
-  doc.rect(0, 0, 210, 45, "F");
-
+  doc.rect(0, 0, width, 12, 'F');
   doc.setTextColor(232, 160, 32);
-  doc.setFontSize(24);
-  doc.setFont("helvetica", "bold");
-  doc.text("CinePOS", 15, 20);
-
-  doc.setTextColor(255, 255, 255);
   doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.text(ticket.theater, 15, 30);
+  doc.setFont('helvetica', 'bold');
+  doc.text('CinePOS', 3, 8);
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(6);
+  doc.text(ticket.bookingRef, width - 3, 8, { align: 'right' });
 
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.text(ticket.bookingRef, 195, 20, { align: "right" });
-  doc.setTextColor(232, 160, 32);
-  doc.setFontSize(9);
-  doc.text("BOOKING CONFIRMED", 195, 28, { align: "right" });
-
+  // Status
   doc.setTextColor(32, 200, 120);
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.text("✓ CONFIRMED", 15, 55);
+  doc.setFontSize(8);
+  doc.text('✓ CONFIRMED', 3, 18);
 
+  // Movie
   doc.setTextColor(26, 26, 46);
-  doc.setFontSize(18);
-  doc.text(ticket.movieTitle, 15, 65);
-
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.text(ticket.movieTitle.substring(0, 25), 3, 24);
   doc.setTextColor(100, 100, 100);
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "normal");
-  doc.text(`${ticket.format} • ${ticket.screen}`, 15, 73);
+  doc.setFontSize(6);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${ticket.format} • ${ticket.screen}`, 3, 28);
 
-  const col1X = 15;
-  const col2X = 110;
-  let y = 90;
-
+  // Date & Time
   doc.setTextColor(150, 150, 150);
-  doc.setFontSize(8);
-  doc.text("DATE", col1X, y);
-  doc.text("TIME", col2X, y);
-  y += 6;
+  doc.setFontSize(5);
+  doc.text('DATE', 3, 35);
+  doc.text('TIME', 30, 35);
   doc.setTextColor(26, 26, 46);
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.text(ticket.showDate, col1X, y);
-  doc.text(ticket.showTime, col2X, y);
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.text(ticket.showDate, 3, 39);
+  doc.text(ticket.showTime, 30, 39);
 
-  y += 15;
+  // Customer & Seats
   doc.setTextColor(150, 150, 150);
-  doc.setFontSize(8);
-  doc.text("CUSTOMER", col1X, y);
-  doc.text("SCREEN", col2X, y);
-  y += 6;
+  doc.setFontSize(5);
+  doc.setFont('helvetica', 'normal');
+  doc.text('GUEST', 3, 46);
+  doc.text('SEATS', 30, 46);
   doc.setTextColor(26, 26, 46);
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.text(ticket.customerName, col1X, y);
-  doc.text(ticket.screen, col2X, y);
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.text((ticket.customerName || 'Guest').substring(0, 12), 3, 50);
+  doc.text(ticket.seats.join(', ').substring(0, 15), 30, 50);
 
-  y += 20;
+  // Seats box
   doc.setFillColor(245, 245, 245);
-  doc.roundedRect(15, y, 180, 30, 3, 3, "F");
-
+  doc.roundedRect(3, 54, width - 6, 10, 1, 1, 'F');
   doc.setTextColor(150, 150, 150);
-  doc.setFontSize(8);
-  doc.text("SEAT NUMBERS", 20, y + 8);
-
+  doc.setFontSize(5);
+  doc.text('SEATS', 5, 58);
   doc.setTextColor(26, 26, 46);
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  const seatsText = ticket.seats.join("  ");
-  doc.text(seatsText, 20, y + 20);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text(ticket.seats.join('  '), 5, 62);
 
-  y += 45;
+  let y = 70;
   if (ticket.foodItems && ticket.foodItems.length > 0) {
     doc.setFillColor(245, 245, 245);
-    doc.roundedRect(15, y, 180, 10 + ticket.foodItems.length * 6, 3, 3, "F");
+    doc.roundedRect(3, y, width - 6, 6 + ticket.foodItems.length * 4, 1, 1, 'F');
     doc.setTextColor(150, 150, 150);
-    doc.setFontSize(8);
-    doc.text("FOOD & BEVERAGES", 20, y + 8);
+    doc.setFontSize(4);
+    doc.text('FOOD', 4, y + 3);
     doc.setTextColor(26, 26, 46);
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    let fy = y + 14;
+    doc.setFontSize(6);
+    let fy = y + 6;
     for (const fi of ticket.foodItems) {
-      doc.text(`${fi.name} x${fi.quantity}`, 20, fy);
-      doc.text(`₹${(fi.price * fi.quantity).toLocaleString("en-IN")}`, 175, fy, { align: "right" });
-      fy += 6;
+      doc.text(`${fi.name} x${fi.quantity}`, 4, fy);
+      doc.text(`₹${fi.price * fi.quantity}`, width - 5, fy, { align: 'right' });
+      fy += 4;
     }
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.text(`Food Total`, 20, fy + 2);
-    doc.text(`₹${(ticket.foodTotal || 0).toLocaleString("en-IN")}`, 175, fy + 2, { align: "right" });
-    y += 15 + ticket.foodItems.length * 6;
-    doc.setDrawColor(230, 230, 230);
-    doc.setLineDashPattern([3, 3], 0);
-    doc.line(15, y, 195, y);
-    y += 15;
-  } else {
-    doc.setDrawColor(230, 230, 230);
-    doc.setLineDashPattern([3, 3], 0);
-    doc.line(15, y, 195, y);
-    y += 15;
+    y += 8 + ticket.foodItems.length * 4;
   }
-  doc.setFontSize(20);
+
+  // Total
+  doc.setFontSize(10);
   doc.setTextColor(232, 160, 32);
-  doc.text(`₹${ticket.totalAmount.toLocaleString("en-IN")}`, 15, y + 5);
-  doc.setFontSize(8);
+  doc.text(`₹${ticket.totalAmount.toLocaleString('en-IN')}`, 3, y);
+  doc.setFontSize(5);
   doc.setTextColor(150, 150, 150);
-  doc.text("TOTAL PAID", 15, y);
+  doc.text('PAID', 3, y - 3);
 
-  doc.addImage(qrDataUrl, "PNG", 140, y - 10, 25, 25);
-  doc.setFontSize(7);
-  doc.text("SCAN AT ENTRY", 152.5, y + 18, { align: "center" });
+  // QR Code
+  doc.addImage(qrDataUrl, 'PNG', width - 18, y - 12, 14, 14);
+  doc.setFontSize(4);
+  doc.setTextColor(150, 150, 150);
+  doc.text('SCAN', width - 11, y + 3, { align: 'center' });
 
-  doc.addImage(barcodeDataUrl, "PNG", 170, y - 5, 25, 15);
-  doc.setFontSize(7);
-  doc.text("BOOKING REF", 182.5, y + 13, { align: "center" });
-
-  doc.setFontSize(8);
+  // Footer
+  doc.setFontSize(4);
   doc.setTextColor(180, 180, 180);
-  doc.text(
-    "• Arrive 15 mins before show • No outside food allowed • Ticket non-transferable",
-    105,
-    280,
-    { align: "center" },
-  );
+  doc.text('Arrive 15 min before show', width / 2, height - 3, { align: 'center' });
 
-  return Buffer.from(doc.output("arraybuffer"));
+  return Buffer.from(doc.output('arraybuffer'));
 }
 
 export function generateThermalTicket(ticket: TicketData): string {

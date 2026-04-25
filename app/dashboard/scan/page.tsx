@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Html5Qrcode } from 'html5-qrcode'
+import { useI18n } from '@/lib/i18n'
+import { useUIStore } from '@/lib/store'
 
 export default function ScanTicketPage() {
   const router = useRouter()
@@ -13,6 +15,8 @@ export default function ScanTicketPage() {
   const [error, setError] = useState('')
   const [cameraActive, setCameraActive] = useState(false)
   const scannerRef = useRef<Html5Qrcode | null>(null)
+  const t = useI18n()
+  const { language, setLanguage } = useUIStore()
   const scannerDivRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {

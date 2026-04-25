@@ -1,6 +1,8 @@
 'use client'
 // app/dashboard/notifications/page.tsx
 import { useState, useEffect } from 'react'
+import { useI18n } from '@/lib/i18n'
+import { useUIStore } from '@/lib/store'
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<any[]>([])
@@ -8,6 +10,8 @@ export default function NotificationsPage() {
   const [filter, setFilter] = useState<{ status?: string; channel?: string }>({})
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const t = useI18n()
+  const { language, setLanguage } = useUIStore()
 
   useEffect(() => {
     loadNotifications()

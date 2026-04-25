@@ -1,6 +1,8 @@
 'use client'
 // app/dashboard/theaters/page.tsx
 import { useEffect, useState } from 'react'
+import { useI18n } from '@/lib/i18n'
+import { useUIStore } from '@/lib/store'
 
 export default function TheatersPage() {
   const [theaters, setTheaters] = useState<any[]>([])

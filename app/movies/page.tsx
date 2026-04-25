@@ -3,11 +3,15 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useI18n } from '@/lib/i18n'
+import { useUIStore } from '@/lib/store'
 
 export default function MoviesPage() {
   const [movies, setMovies] = useState([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+  const t = useI18n()
+  const { language, setLanguage } = useUIStore()
 
   useEffect(() => {
     fetch('/api/movies').then(r => r.json()).then(data => {
@@ -19,15 +23,25 @@ export default function MoviesPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)' }}>
       {/* Simple Nav */}
-      <nav style={{ height: 64, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', padding: '0 5%' }}>
-        <Link href="/" style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 900, color: 'var(--accent)', textDecoration: 'none' }}>🎬 CinePOS</Link>
-      </nav>
+      <div style={{ height: 64, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', padding: '0 5%', justifyContent: 'space-between' }}>
+        <Link href="/" style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 900, color: 'var(--accent)', textDecoration: 'none' }}>🎬 {t('app.name')}</Link>
+        <select
+          value={language}
+          onChange={(e) => setLanguage(e.target.value as any)}
+          style={{ background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', fontSize: 12, cursor: 'pointer' }}
+        >
+          <option value="en">EN</option>
+          <option value="hi">HI</option>
+          <option value="te">TE</option>
+          <option value="ta">TA</option>
+        </select>
+      </div>
 
       <div style={{ padding: '40px 5%' }}>
-        <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 40 }}>All Movies</h1>
+        <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 40 }}>{t('nav.movies')}</h1>
 
         {loading ? (
-          <div>Loading...</div>
+          <div>{t('common.loading')}</div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 32 }}>
             {movies.map((movie: any) => (

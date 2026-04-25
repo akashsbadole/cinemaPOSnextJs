@@ -20,11 +20,11 @@ export async function POST(req: Request) {
     }
 
     const token = await createToken({
-      id: user.id, name: user.name, email: user.email, role: user.role,
+      id: user.id, name: user.name, email: user.email, role: user.role, theaterId: user.theaterId,
     })
 
     const response = NextResponse.json({
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: { id: user.id, name: user.name, email: user.email, role: user.role, theaterId: user.theaterId },
     })
 
     response.cookies.set('cinepos-token', token, {

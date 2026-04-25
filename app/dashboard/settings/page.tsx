@@ -1,21 +1,30 @@
 'use client'
 // app/dashboard/settings/page.tsx
 import { useState, useEffect } from 'react'
+import { useUIStore } from '@/lib/store'
+import { useI18n } from '@/lib/i18n'
 
 export default function SettingsPage() {
   const [toast, setToast] = useState('')
+  const { theme, toggleTheme, language, setLanguage } = useUIStore()
+  const t = useI18n()
   const [settings, setSettings] = useState<any>({
     RAZORPAY_ENABLED: 'false',
     RAZORPAY_KEY_ID: '',
     RAZORPAY_KEY_SECRET: '',
+    SMS_ENABLED: 'true',
+    EMAIL_ENABLED: 'true',
+    WHATSAPP_ENABLED: 'false',
+    AUTO_SEND_REMINDER: 'true',
+    REMINDER_HOURS_BEFORE: '2',
   })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetch('/api/settings')
       .then(r => r.json())
-      .then(data => {
-        setSettings(prev => ({ ...prev, ...data }))
+      .then((data: any) => {
+        setSettings((prev: any) => ({ ...prev, ...data }))
         setLoading(false)
       })
   }, [])
@@ -41,8 +50,34 @@ export default function SettingsPage() {
   return (
     <div className="animate-fadeIn" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 700 }}>Settings</div>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 700 }}>{t('settings.profile')}</div>
         <div style={{ color: 'var(--muted)', marginTop: 2 }}>System configuration and preferences</div>
+      </div>
+
+      <div className="cp-card" style={{ overflow: 'hidden' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: 14 }}>🎨 {t('settings.theme')} & {t('settings.language')}</div>
+        <div style={{ padding: 20, display: 'flex', gap: 32, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button
+              onClick={toggleTheme}
+              style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer', fontWeight: 500 }}
+            >
+              {theme === 'dark' ? '🌙 ' + t('settings.dark') : '☀️ ' + t('settings.light')}
+            </button>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as any)}
+              style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer', fontWeight: 500 }}
+            >
+              <option value="en">English</option>
+              <option value="hi">हिंदी (Hindi)</option>
+              <option value="te">తెలుగు (Telugu)</option>
+              <option value="ta">தமிழ் (Tamil)</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <div className="cp-card" style={{ overflow: 'hidden' }}>
@@ -79,6 +114,65 @@ export default function SettingsPage() {
                 onChange={e => setSettings({ ...settings, RAZORPAY_KEY_SECRET: e.target.value })}
               />
             </div>
+          </div>
+        </div>
+        <div style={{ padding: '0 20px 20px' }}>
+          <button className="btn btn-primary btn-sm" onClick={handleSave}>Save Changes</button>
+        </div>
+      </div>
+
+      <div className="cp-card" style={{ overflow: 'hidden' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: 14 }}>📱 Notification Settings</div>
+        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <input
+              type="checkbox"
+              id="sms-enabled"
+              checked={settings.SMS_ENABLED === 'true'}
+              onChange={e => setSettings({ ...settings, SMS_ENABLED: String(e.target.checked) })}
+            />
+            <label htmlFor="sms-enabled" style={{ fontSize: 13, fontWeight: 500 }}>Enable SMS Notifications</label>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <input
+              type="checkbox"
+              id="email-enabled"
+              checked={settings.EMAIL_ENABLED === 'true'}
+              onChange={e => setSettings({ ...settings, EMAIL_ENABLED: String(e.target.checked) })}
+            />
+            <label htmlFor="email-enabled" style={{ fontSize: 13, fontWeight: 500 }}>Enable Email Notifications</label>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <input
+              type="checkbox"
+              id="whatsapp-enabled"
+              checked={settings.WHATSAPP_ENABLED === 'true'}
+              onChange={e => setSettings({ ...settings, WHATSAPP_ENABLED: String(e.target.checked) })}
+            />
+            <label htmlFor="whatsapp-enabled" style={{ fontSize: 13, fontWeight: 500 }}>Enable WhatsApp Notifications</label>
+          </div>
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+              <input
+                type="checkbox"
+                id="auto-reminder"
+                checked={settings.AUTO_SEND_REMINDER === 'true'}
+                onChange={e => setSettings({ ...settings, AUTO_SEND_REMINDER: String(e.target.checked) })}
+              />
+              <label htmlFor="auto-reminder" style={{ fontSize: 13, fontWeight: 500 }}>Auto-send show reminders</label>
+            </div>
+            {settings.AUTO_SEND_REMINDER === 'true' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <label style={{ fontSize: 13 }}>Hours before show:</label>
+                <input
+                  className="cp-input"
+                  type="number"
+                  style={{ width: 80 }}
+                  value={settings.REMINDER_HOURS_BEFORE}
+                  onChange={e => setSettings({ ...settings, REMINDER_HOURS_BEFORE: e.target.value })}
+                />
+              </div>
+            )}
           </div>
         </div>
         <div style={{ padding: '0 20px 20px' }}>

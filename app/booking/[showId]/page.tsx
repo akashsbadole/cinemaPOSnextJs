@@ -3,17 +3,21 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useI18n } from '@/lib/i18n'
+import { useUIStore } from '@/lib/store'
 
 export default function BookingPage() {
   const { showId } = useParams()
   const [show, setShow] = useState<any>(null)
   const [seats, setSeats] = useState<any[]>([])
   const [selectedSeats, setSelectedSeats] = useState<string[]>([])
-  const [step, setStep] = useState(1) // 1: Seats, 2: Details/Payment
+  const [step, setStep] = useState(1)
   const [guestDetails, setGuestDetails] = useState({ name: '', email: '', phone: '' })
   const [loading, setLoading] = useState(true)
   const [razorpaySettings, setRazorpaySettings] = useState<any>(null)
   const router = useRouter()
+  const t = useI18n()
+  const { language, setLanguage } = useUIStore()
 
   useEffect(() => {
     Promise.all([
@@ -46,7 +50,7 @@ export default function BookingPage() {
 
   async function handleBooking() {
     if (!guestDetails.email || !guestDetails.name) {
-      alert('Please fill in your details')
+      alert(t('error.required'))
       return
     }
 
@@ -55,7 +59,7 @@ export default function BookingPage() {
         key: razorpaySettings.RAZORPAY_KEY_ID,
         amount: totalPrice * 100,
         currency: "INR",
-        name: "CinePOS",
+        name: t('app.name'),
         description: `Booking for ${show.movie.title}`,
         handler: async function (response: any) {
           await createBooking(response.razorpay_payment_id)
@@ -104,7 +108,7 @@ export default function BookingPage() {
     }
   }
 
-  if (loading) return <div style={{ padding: 50, textAlign: 'center' }}>Loading seat map...</div>
+  if (loading) return <div style={{ padding: 50, textAlign: 'center' }}>{t('common.loading')}</div>
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', padding: '40px 5%' }}>
@@ -112,12 +116,7 @@ export default function BookingPage() {
         <div style={{ marginBottom: 32, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h1 style={{ fontSize: 28, fontWeight: 800 }}>{show.movie.title}</h1>
-            <div style={{ color: 'var(--muted)', fontSize: 14 }}>{show.screen.theater.name} • {new Date(show.startTime).toLocaleString()}</div>
-          </div>
-          <div style={{ display: 'flex', gap: 4 }}>
-            {[1, 2].map(s => (
-              <div key={s} style={{ width: 40, height: 4, background: step >= s ? 'var(--accent)' : 'var(--border)', borderRadius: 2 }} />
-            ))}
+            <div style={{ color: 'var(--muted)', fontSize: 14 }}>{show.screen.theater.name} · {new Date(show.startTime).toLocaleString()}</div>
           </div>
         </div>
 
@@ -125,7 +124,7 @@ export default function BookingPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 40 }}>
             <div className="cp-card" style={{ padding: 40, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <div style={{ width: '80%', height: 4, background: 'var(--border)', borderRadius: 4, marginBottom: 60, position: 'relative' }}>
-                <div style={{ position: 'absolute', top: 10, left: 0, right: 0, textAlign: 'center', fontSize: 10, color: 'var(--muted)', letterSpacing: 2 }}>SCREEN THIS WAY</div>
+                <div style={{ position: 'absolute', top: 10, left: 0, right: 0, textAlign: 'center', fontSize: 10, color: 'var(--muted)', letterSpacing: 2 }}>SCREEN</div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -161,9 +160,9 @@ export default function BookingPage() {
             </div>
 
             <div className="cp-card" style={{ padding: 24, height: 'fit-content' }}>
-              <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20 }}>Booking Summary</h3>
+              <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20 }}>{t('booking.confirmSeats')}</h3>
               {selectedSeats.length === 0 ? (
-                <p style={{ color: 'var(--muted)', fontSize: 14 }}>No seats selected</p>
+                <p style={{ color: 'var(--muted)', fontSize: 14 }}>{t('booking.noSeats')}</p>
               ) : (
                 <>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
@@ -174,11 +173,11 @@ export default function BookingPage() {
                   </div>
                   <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginBottom: 24 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                      <span style={{ color: 'var(--muted)', fontSize: 14 }}>Tickets ({selectedSeats.length})</span>
+                      <span style={{ color: 'var(--muted)', fontSize: 14 }}>{t('booking.seats')} ({selectedSeats.length})</span>
                       <span style={{ fontWeight: 600 }}>₹{totalPrice}</span>
                     </div>
                   </div>
-                  <button className="btn btn-primary btn-full" onClick={() => setStep(2)}>Confirm Seats</button>
+                  <button className="btn btn-primary btn-full" onClick={() => setStep(2)}>{t('common.confirm')}</button>
                 </>
               )}
             </div>
@@ -186,10 +185,10 @@ export default function BookingPage() {
         ) : (
           <div style={{ maxWidth: 500, margin: '0 auto' }}>
             <div className="cp-card" style={{ padding: 32 }}>
-              <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 24 }}>Guest Checkout</h3>
+              <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 24 }}>{t('booking.guestDetails')}</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Full Name</label>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>{t('auth.name')}</label>
                   <input
                     className="cp-input"
                     placeholder="John Doe"
@@ -198,7 +197,7 @@ export default function BookingPage() {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Email Address</label>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>{t('auth.email')}</label>
                   <input
                     className="cp-input"
                     type="email"
@@ -207,27 +206,25 @@ export default function BookingPage() {
                     onChange={e => setGuestDetails({...guestDetails, email: e.target.value})}
                   />
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Phone Number</label>
-                  <input
-                    className="cp-input"
-                    placeholder="+91 98765 43210"
-                    value={guestDetails.phone}
-                    onChange={e => setGuestDetails({...guestDetails, phone: e.target.value})}
-                  />
-                </div>
-
-                <div style={{ background: 'var(--bg)', padding: 16, borderRadius: 12, marginTop: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
-                    <span>Total Amount</span>
-                    <span>₹{totalPrice}</span>
+<div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>{t('auth.phone')}</label>
+                    <input
+                      className="cp-input"
+                      placeholder="+91 98765 43210"
+                      value={guestDetails.phone}
+                      onChange={e => setGuestDetails({...guestDetails, phone: e.target.value})}
+                    />
                   </div>
-                </div>
 
-                <button className="btn btn-primary btn-full" onClick={handleBooking} style={{ marginTop: 12 }}>
-                  Pay & Book Tickets
-                </button>
-                <button className="btn btn-ghost btn-full" onClick={() => setStep(1)}>Back to Seats</button>
+                  {razorpaySettings?.RAZORPAY_ENABLED === 'true' ? (
+                    <button type="button" className="btn btn-primary btn-full" onClick={handleBooking} style={{ marginTop: 16 }}>
+                      {t('payment.pay')} ₹{totalPrice}
+                    </button>
+                  ) : (
+                    <button type="button" className="btn btn-primary btn-full" onClick={handleBooking} style={{ marginTop: 16 }}>
+                      {t('booking.bookNow')}
+                    </button>
+                  )}
               </div>
             </div>
           </div>

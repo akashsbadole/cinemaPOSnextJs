@@ -2,6 +2,8 @@
 // app/dashboard/coupons/page.tsx
 import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
+import { useI18n } from '@/lib/i18n'
+import { useUIStore } from '@/lib/store'
 
 const EMPTY = { code: '', type: 'PERCENT', value: 10, minAmount: 0, maxDiscount: '', usageLimit: '', validFrom: format(new Date(), 'yyyy-MM-dd'), validUntil: '' }
 
@@ -13,6 +15,8 @@ export default function CouponsPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
+  const t = useI18n()
+  const { language, setLanguage } = useUIStore()
 
   const load = () => { setLoading(true); fetch('/api/coupons').then(r => r.json()).then(d => { setCoupons(d.coupons || []); setLoading(false) }) }
   useEffect(() => { load() }, [])

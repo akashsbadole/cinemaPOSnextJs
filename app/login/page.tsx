@@ -2,6 +2,8 @@
 // app/login/page.tsx
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useI18n } from '@/lib/i18n'
+import { useUIStore } from '@/lib/store'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -9,6 +11,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const t = useI18n()
+  const { language, setLanguage } = useUIStore()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -78,22 +82,22 @@ export default function LoginPage() {
             fontSize: 36, fontWeight: 900,
             color: 'var(--accent)',
             letterSpacing: '-1px',
-          }}>CinePOS</div>
+}}>{t('app.name')}</div>
           <div style={{ color: 'var(--muted)', fontSize: 13, marginTop: 6 }}>
-            Theater Management & Booking System
+            {t('app.tagline')}
           </div>
         </div>
 
         {/* Card */}
         <div className="cp-card" style={{ padding: 32 }}>
           <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 24, color: 'var(--text)' }}>
-            Sign in to your account
+            {t('auth.signIn')}
           </div>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
               <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--muted)', fontFamily: 'var(--font-mono)', marginBottom: 6 }}>
-                Email Address
+                {t('auth.email')}
               </label>
               <input
                 type="email" value={email} onChange={e => setEmail(e.target.value)}
@@ -103,7 +107,7 @@ export default function LoginPage() {
             </div>
             <div>
               <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--muted)', fontFamily: 'var(--font-mono)', marginBottom: 6 }}>
-                Password
+                {t('auth.password')}
               </label>
               <input
                 type="password" value={password} onChange={e => setPassword(e.target.value)}
@@ -119,7 +123,7 @@ export default function LoginPage() {
             )}
 
             <button type="submit" className="btn btn-primary btn-lg btn-full" disabled={loading} style={{ marginTop: 4 }}>
-              {loading ? <span className="spinner" /> : '→ Sign In'}
+              {loading ? <span className="spinner" /> : '→ ' + t('auth.signIn')}
             </button>
           </form>
 
@@ -152,8 +156,18 @@ export default function LoginPage() {
         </div>
 
         <div style={{ textAlign: 'center', marginTop: 20, color: 'var(--muted)', fontSize: 12 }}>
-          v1.0.0 · CinePOS Desktop &amp; Web
-        </div>
+          v1.0.0 · CinePOS · {' '}
+          <select
+            value={language}
+            onChange={(e) => setLanguage(e.target.value as any)}
+            style={{ background: 'transparent', color: 'var(--muted)', border: 'none', fontSize: 12, cursor: 'pointer' }}
+          >
+            <option value="en">EN</option>
+            <option value="hi">HI</option>
+            <option value="te">TE</option>
+            <option value="ta">TA</option>
+          </select>
+</div>
       </div>
     </div>
   )

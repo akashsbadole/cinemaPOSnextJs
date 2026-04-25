@@ -23,6 +23,24 @@
   --font-body: 'DM Sans', sans-serif;
 }
 
+/* Light theme */
+.light {
+  --bg: #F5F5F5;
+  --surface: #FFFFFF;
+  --card: #FFFFFF;
+  --border: #E0E0E0;
+  --accent: #E8A020;
+  --accent-dim: rgba(232,160,32,0.15);
+  --accent-hover: #D49210;
+  --red: #DC2626;
+  --green: #16A34A;
+  --blue: #2563EB;
+  --purple: #7C3AED;
+  --text: #1A1A1A;
+  --muted: #6B7280;
+  --subtle: #E5E5E5;
+}
+
 * { box-sizing: border-box; }
 
 html, body {

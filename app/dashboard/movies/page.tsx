@@ -2,6 +2,8 @@
 // app/dashboard/movies/page.tsx
 import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
+import { useI18n } from '@/lib/i18n'
+import { useUIStore } from '@/lib/store'
 
 interface Movie { id: string; title: string; duration: number; genre: string; language: string; format: string; rating: string; active: boolean; releaseDate: string; description: string }
 
@@ -16,6 +18,8 @@ export default function MoviesPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
+  const t = useI18n()
+  const { language, setLanguage } = useUIStore()
 
   const load = () => {
     setLoading(true)

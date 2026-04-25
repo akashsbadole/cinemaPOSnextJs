@@ -2,6 +2,8 @@
 // app/dashboard/shows/page.tsx
 import { useEffect, useState } from 'react'
 import { format, addDays, startOfDay } from 'date-fns'
+import { useI18n } from '@/lib/i18n'
+import { useUIStore } from '@/lib/store'
 
 export default function ShowsPage() {
   const [shows, setShows] = useState<any[]>([])
@@ -16,6 +18,8 @@ export default function ShowsPage() {
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
   const [selectedTheaterId, setSelectedTheaterId] = useState('')
+  const t = useI18n()
+  const { language, setLanguage } = useUIStore()
 
   const loadShows = () => {
     setLoading(true)

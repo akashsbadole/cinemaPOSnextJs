@@ -4,6 +4,8 @@ import { db } from '@/lib/db'
 import { getSession } from '@/lib/auth'
 import { lockSeats, generateBookingRef } from '@/lib/seat-lock'
 import { sendBookingConfirmation } from '@/lib/notifications'
+import { generateTicketPDF, TicketData } from '@/lib/ticket'
+import { format } from 'date-fns'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -81,7 +83,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const user = await getSession()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  // Allow guest bookings (user can be null for web bookings)
 
   try {
     const body = await req.json()
@@ -172,9 +174,9 @@ export async function POST(req: Request) {
       const b = await tx.booking.create({
         data: {
           bookingRef,
-          userId: user.id,
+          userId: user?.id ?? null,
           showId: data.showId,
-          customerName: data.customerName || user.name,
+          customerName: data.customerName || user?.name || '',
           customerPhone: data.customerPhone,
           customerEmail: data.customerEmail || undefined,
           status: 'CONFIRMED',
@@ -211,6 +213,24 @@ export async function POST(req: Request) {
 
     // Send notification (async, don't wait)
     const showStart = new Date(booking.show.startTime)
+    
+    // Generate ticket PDF for email attachment
+    const ticketData: TicketData = {
+      bookingRef: booking.bookingRef,
+      movieTitle: booking.show.movie.title,
+      showDate: format(showStart, 'dd MMM yyyy'),
+      showTime: format(showStart, 'hh:mm a'),
+      screen: booking.show.screen.name,
+      theater: booking.show.screen.theater.name,
+      seats: booking.bookingSeats.map(bs => `${bs.seat.row}${bs.seat.number}`),
+      customerName: booking.customerName || 'Guest',
+      totalAmount: booking.finalAmount,
+      format: booking.show.movie.format,
+    }
+    
+    const pdfBuffer = await generateTicketPDF(ticketData)
+    const pdfBase64 = Buffer.from(pdfBuffer).toString('base64')
+    
     sendBookingConfirmation({
       bookingRef: booking.bookingRef,
       customerName: booking.customerName || '',
@@ -222,6 +242,7 @@ export async function POST(req: Request) {
       screen: booking.show.screen.name,
       seats: booking.bookingSeats.map(bs => `${bs.seat.row}${bs.seat.number}`),
       totalAmount: booking.finalAmount,
+      ticketPdf: pdfBase64,
     }).catch(console.error)
 
     return NextResponse.json({ booking }, { status: 201 })

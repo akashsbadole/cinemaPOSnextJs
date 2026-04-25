@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import Link from 'next/link'
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import { useI18n } from '@/lib/i18n'
+import { useUIStore } from '@/lib/store'
 
 interface DashStats {
   todayRevenue: number; yesterdayRevenue: number; revenueGrowth: number
@@ -16,6 +18,8 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashStats | null>(null)
   const [revenueData, setRevenueData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const t = useI18n()
+  const { language, setLanguage } = useUIStore()
 
   useEffect(() => {
     Promise.all([
@@ -69,14 +73,14 @@ export default function DashboardPage() {
 
       {/* KPI Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-        <KPI label="Today's Revenue" value={fmtCurrency(stats?.todayRevenue || 0)}
-          delta={`${stats?.revenueGrowth || 0}% vs yesterday`} dir={Number(stats?.revenueGrowth) >= 0 ? 'up' : 'down'}
+        <KPI label={t('dash.revenue')} value={fmtCurrency(stats?.todayRevenue || 0)}
+          delta={`${stats?.revenueGrowth || 0}% ${t('common.yesterday')}`} dir={Number(stats?.revenueGrowth) >= 0 ? 'up' : 'down'}
           icon="💰" color="var(--accent)" />
-        <KPI label="Tickets Sold" value={stats?.todayTickets || 0}
-          delta={`${stats?.ticketGrowth || 0}% vs yesterday`} dir={Number(stats?.ticketGrowth) >= 0 ? 'up' : 'down'}
+        <KPI label={t('dash.tickets')} value={stats?.todayTickets || 0}
+          delta={`${stats?.ticketGrowth || 0}% ${t('common.yesterday')}`} dir={Number(stats?.ticketGrowth) >= 0 ? 'up' : 'down'}
           icon="🎟️" color="var(--blue)" />
-        <KPI label="Live Shows" value={stats?.liveShows || 0} delta="right now" dir="up" icon="📽️" color="var(--green)" />
-        <KPI label="Cancellations" value={stats?.cancellations || 0} delta="today" dir="down" icon="🔁" color="var(--red)" />
+        <KPI label={t('dash.todayShows')} value={stats?.liveShows || 0} delta={t('show.live')} dir="up" icon="📽️" color="var(--green)" />
+        <KPI label={t('common.cancelled')} value={stats?.cancellations || 0} delta={t('common.today')} dir="down" icon="🔁" color="var(--red)" />
       </div>
 
       {/* Charts */}
@@ -84,7 +88,7 @@ export default function DashboardPage() {
         {/* Revenue Chart */}
         <div className="cp-card" style={{ padding: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <div style={{ fontWeight: 600 }}>📈 Revenue — Last 7 Days</div>
+            <div style={{ fontWeight: 600 }}>📈 {t('analytics.dailyRevenue')}</div>
             <div style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>
               ₹{((revenueData.reduce((s, d) => s + d.revenue, 0)) / 1000).toFixed(1)}K total
             </div>

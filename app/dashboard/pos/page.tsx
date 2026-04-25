@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { format } from 'date-fns'
+import { useI18n } from '@/lib/i18n'
+import { useUIStore } from '@/lib/store'
 
 interface Seat {
   id: string; row: string; number: number; type: 'VIP' | 'PREMIUM' | 'REGULAR'
@@ -34,6 +36,8 @@ export default function POSPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const preselectedShowId = searchParams.get('showId')
+  const t = useI18n()
+  const { language, setLanguage } = useUIStore()
 
   const [shows, setShows] = useState<Show[]>([])
   const [selectedShowId, setSelectedShowId] = useState<string>(preselectedShowId || '')

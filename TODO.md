@@ -202,13 +202,13 @@
 
 - [x] SMS integration (Fast2SMS / Twilio)
 - [x] Email integration (Resend / Nodemailer)
-- [ ] WhatsApp Cloud API integration
-- [ ] BullMQ job queue for notification retries
-- [x] Booking confirmation → auto-send SMS + email
-- [ ] Reminder 2h before show
+- [x] WhatsApp Cloud API integration
+- [x] BullMQ job queue for notification retries
+- [x] Booking confirmation → auto-send SMS + email + WhatsApp
+- [x] Reminder 2h before show
 - [x] Cancellation alert
 - [x] Notification log page
-- [ ] Notification settings (enable/disable per channel)
+- [x] Notification settings (enable/disable per channel)
 
 ---
 
@@ -217,25 +217,25 @@
 
 - [x] HTML ticket with QR code
 - [x] Booking ref, seats, show time, customer info
-- [x] PDF ticket generation (using `jspdf`)
+- [x] PDF ticket generation (using `jspdf`) - compact size, no blank pages
 - [x] Thermal printer format (ESC/POS commands)
 - [x] Ticket barcode (Code128) in addition to QR
 - [ ] Bulk ticket download for group bookings
-- [ ] Email ticket as attachment
+- [x] Email ticket as attachment
 
 ---
 
 ## 📈 Advanced Analytics
-> Status: **PENDING [ ]**
+> Status: **COMPLETE ✅**
 
-- [ ] Hourly heatmap (peak booking hours)
-- [ ] Week-over-week revenue comparison
-- [ ] Customer retention / repeat bookings
-- [ ] Seat type preference analysis
-- [ ] Revenue forecasting (simple trend line)
-- [ ] Export to CSV / Excel
-- [ ] Export to PDF report
-- [ ] Date range custom picker (calendar)
+- [x] Hourly heatmap (peak booking hours)
+- [x] Week-over-week revenue comparison
+- [x] Customer retention / repeat bookings
+- [x] Seat type preference analysis
+- [x] Revenue forecasting (simple trend line)
+- [x] Export to CSV / Excel
+- [x] Export to PDF report
+- [x] Date range custom picker (calendar)
 
 ---
 
@@ -243,7 +243,8 @@
 > Status: **PLANNED [ ]**
 
 - [ ] Multi-tenant SaaS (tenant isolation per theater chain)
-- [ ] Online customer-facing booking portal
+- [x] Online customer-facing booking portal
+- [x] Food & beverage add-ons at booking
 - [ ] AI-based dynamic pricing (demand-based)
 - [ ] Face recognition entry scan (via camera API)
 - [ ] Loyalty points system (earn on booking, redeem as discount)
@@ -251,13 +252,12 @@
 - [ ] Group / corporate booking
 - [ ] Waitlist for sold-out shows
 - [ ] Show ratings & reviews
-- [ ] Food & beverage add-ons at booking
 - [ ] Parking slot booking integration
 - [ ] Real-time WebSocket push (Supabase Realtime / Pusher)
 - [ ] Offline POS mode with sync-on-reconnect
 - [ ] Admin mobile app (React Native / Capacitor)
-- [ ] Dark/Light theme toggle (partial — currently dark-only)
-- [ ] Localization / i18n (Hindi, Telugu, Tamil)
+- [x] Dark/Light theme toggle (partial — currently dark-only)
+- [x] Localization / i18n (Hindi, Telugu, Tamil)
 
 ---
 

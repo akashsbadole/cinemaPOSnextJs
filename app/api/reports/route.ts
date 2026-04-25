@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSession, hasPermission } from '@/lib/auth'
+import { format, subDays } from 'date-fns'
 
 export async function GET(req: Request) {
   const user = await getSession()
@@ -13,154 +14,157 @@ export async function GET(req: Request) {
   const type = searchParams.get('type') || 'dashboard'
   const from = searchParams.get('from')
   const to = searchParams.get('to')
+  const exportFormat = searchParams.get('export')
 
-  const fromDate = from ? new Date(from) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+  const fromDate = from ? new Date(from) : subDays(new Date(), 30)
   fromDate.setHours(0, 0, 0, 0)
   const toDate = to ? new Date(to) : new Date()
   toDate.setHours(23, 59, 59, 999)
 
   try {
+    // Dashboard
     if (type === 'dashboard') {
-      // Today stats
       const today = new Date(); today.setHours(0, 0, 0, 0)
-      const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999)
-      const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1)
-      const yesterdayEnd = new Date(todayEnd); yesterdayEnd.setDate(yesterdayEnd.getDate() - 1)
+      const todayEnd = new Date(today); todayEnd.setHours(23, 59, 59, 999)
 
-      const [todayBookings, yesterdayBookings, todayShows, liveShows] = await Promise.all([
-        db.booking.findMany({
-          where: { createdAt: { gte: today, lte: todayEnd }, status: { in: ['CONFIRMED', 'REFUNDED'] } },
-          include: { bookingSeats: true },
-        }),
-        db.booking.findMany({
-          where: { createdAt: { gte: yesterday, lte: yesterdayEnd }, status: { in: ['CONFIRMED', 'REFUNDED'] } },
-        }),
-        db.show.findMany({
-          where: { startTime: { gte: today, lte: todayEnd } },
-          include: {
-            movie: true, screen: { include: { theater: true, seats: true } },
-            bookings: { where: { status: { in: ['CONFIRMED', 'PENDING'] } }, include: { bookingSeats: true } },
-          },
-          orderBy: { startTime: 'asc' },
-        }),
-        db.show.count({ where: { status: 'LIVE' } }),
-      ])
-
-      const todayRevenue = todayBookings.reduce((s, b) => s + b.finalAmount, 0)
-      const yesterdayRevenue = yesterdayBookings.reduce((s, b) => s + b.finalAmount, 0)
-      const todayTickets = todayBookings.reduce((s, b) => s + b.bookingSeats.length, 0)
-      const yesterdayTickets = yesterdayBookings.length
-
-      const showsWithOcc = todayShows.map(show => {
-        const total = show.screen.seats.length
-        const booked = new Set(show.bookings.flatMap(b => b.bookingSeats.map(bs => bs.seatId))).size
-        return { ...show, totalSeats: total, bookedCount: booked, occupancyPct: total > 0 ? Math.round((booked / total) * 100) : 0 }
+      const bookings = await db.booking.findMany({
+        where: { createdAt: { gte: today, lte: todayEnd }, status: { in: ['CONFIRMED', 'REFUNDED'] } },
+        include: { bookingSeats: true }
       })
 
-      const cancellations = await db.booking.count({ where: { createdAt: { gte: today }, status: 'CANCELLED' } })
+      const shows = await db.show.findMany({
+        where: { startTime: { gte: today, lte: todayEnd } }
+      })
+
+      const revenue = bookings.reduce((s, b) => s + b.finalAmount, 0)
+      const tickets = bookings.reduce((s, b) => s + b.bookingSeats.length, 0)
 
       return NextResponse.json({
-        todayRevenue, yesterdayRevenue,
-        revenueGrowth: yesterdayRevenue > 0 ? ((todayRevenue - yesterdayRevenue) / yesterdayRevenue * 100).toFixed(1) : 0,
-        todayTickets, yesterdayTickets,
-        ticketGrowth: yesterdayTickets > 0 ? ((todayTickets - yesterdayTickets) / yesterdayTickets * 100).toFixed(1) : 0,
-        liveShows,
-        cancellations,
-        shows: showsWithOcc,
+        todayRevenue: revenue,
+        todayBookings: bookings.length,
+        todayTickets: tickets,
+        todayShows: shows.length
       })
     }
 
-    if (type === 'revenue') {
-      // Daily revenue for date range
+    // Hourly heatmap
+    if (type === 'hourly_heatmap') {
       const bookings = await db.booking.findMany({
-        where: { createdAt: { gte: fromDate, lte: toDate }, status: { in: ['CONFIRMED', 'REFUNDED'] } },
-        select: { createdAt: true, finalAmount: true, channel: true },
+        where: { createdAt: { gte: fromDate, lte: toDate }, status: 'CONFIRMED' }
       })
 
-      const byDay: Record<string, { date: string; revenue: number; count: number }> = {}
+      const hourly = Array(24).fill(0).map((h, i) => ({ hour: i, label: `${i}:00`, bookings: 0, revenue: 0 }))
       bookings.forEach(b => {
-        const day = b.createdAt.toISOString().slice(0, 10)
-        if (!byDay[day]) byDay[day] = { date: day, revenue: 0, count: 0 }
-        byDay[day].revenue += b.finalAmount
-        byDay[day].count += 1
+        const h = b.createdAt.getHours()
+        hourly[h].bookings++
+        hourly[h].revenue += b.finalAmount
       })
 
-      const totalRevenue = bookings.reduce((s, b) => s + b.finalAmount, 0)
-      const byChannel = bookings.reduce((acc: any, b) => {
-        acc[b.channel] = (acc[b.channel] || 0) + b.finalAmount
-        return acc
-      }, {})
-
-      return NextResponse.json({ daily: Object.values(byDay).sort((a, b) => a.date.localeCompare(b.date)), totalRevenue, byChannel })
+      return NextResponse.json({ hourly })
     }
 
-    if (type === 'occupancy') {
-      const shows = await db.show.findMany({
-        where: { startTime: { gte: fromDate, lte: toDate } },
-        include: {
-          movie: true,
-          screen: { include: { seats: true } },
-          bookings: { where: { status: { in: ['CONFIRMED'] } }, include: { bookingSeats: true } },
-        },
-        orderBy: { startTime: 'desc' },
+    // Week comparison
+    if (type === 'week_comparison') {
+      const daysDiff = 7
+      const currStart = fromDate
+      const prevStart = subDays(fromDate, daysDiff)
+
+      const [curr, prev] = await Promise.all([
+        db.booking.aggregate({ where: { createdAt: { gte: currStart, lte: toDate }, status: 'CONFIRMED' }, _sum: { finalAmount: true }, _count: true }),
+        db.booking.aggregate({ where: { createdAt: { gte: prevStart, lte: subDays(fromDate, 1) }, status: 'CONFIRMED' }, _sum: { finalAmount: true }, _count: true })
+      ])
+
+      const currRev = curr._sum.finalAmount || 0
+      const prevRev = prev._sum.finalAmount || 0
+
+      return NextResponse.json({
+        current: { revenue: currRev, bookings: curr._count },
+        previous: { revenue: prevRev, bookings: prev._count },
+        growth: prevRev > 0 ? ((currRev - prevRev) / prevRev * 100).toFixed(1) : 0
       })
-
-      const enriched = shows.map(show => {
-        const total = show.screen.seats.length
-        const booked = new Set(show.bookings.flatMap(b => b.bookingSeats.map(bs => bs.seatId))).size
-        const revenue = show.bookings.reduce((s, b) => {
-          return s + b.bookingSeats.reduce((ss, bs) => ss + bs.price, 0)
-        }, 0)
-        return {
-          id: show.id, movie: show.movie.title, screen: show.screen.name,
-          startTime: show.startTime, status: show.status,
-          total, booked, available: total - booked,
-          occupancyPct: total > 0 ? Math.round((booked / total) * 100) : 0,
-          revenue,
-        }
-      })
-
-      const avgOccupancy = enriched.length > 0
-        ? Math.round(enriched.reduce((s, e) => s + e.occupancyPct, 0) / enriched.length)
-        : 0
-
-      return NextResponse.json({ shows: enriched, avgOccupancy })
     }
 
-    if (type === 'movies') {
+    // Customer retention
+    if (type === 'customer_retention') {
+      const bookings = await db.booking.findMany({
+        where: { createdAt: { gte: fromDate, lte: toDate }, status: 'CONFIRMED', customerPhone: { not: null } }
+      })
+
+      const stats = new Map<string, number>()
+      bookings.forEach(b => { const p = b.customerPhone!; stats.set(p, (stats.get(p) || 0) + 1) })
+      const counts = Array.from(stats.values())
+      const repeat = counts.filter(c => c > 1).length
+
+      return NextResponse.json({
+        totalCustomers: counts.length,
+        repeatCustomers: repeat,
+        retentionRate: counts.length ? (repeat / counts.length * 100).toFixed(1) : 0
+      })
+    }
+
+    // Seat preference
+    if (type === 'seat_preference') {
       const bookings = await db.booking.findMany({
         where: { createdAt: { gte: fromDate, lte: toDate }, status: 'CONFIRMED' },
-        include: {
-          show: { include: { movie: true } },
-          bookingSeats: true,
-        },
+        include: { bookingSeats: { include: { seat: true } } }
       })
 
-      const byMovie: Record<string, any> = {}
-      bookings.forEach(b => {
-        const mid = b.show.movie.id
-        if (!byMovie[mid]) byMovie[mid] = { id: mid, title: b.show.movie.title, revenue: 0, tickets: 0, bookings: 0 }
-        byMovie[mid].revenue += b.finalAmount
-        byMovie[mid].tickets += b.bookingSeats.length
-        byMovie[mid].bookings += 1
-      })
+      const types: Record<string, number> = { REGULAR: 0, PREMIUM: 0, VIP: 0 }
+      bookings.forEach(b => { b.bookingSeats.forEach(bs => { const t = bs.seat.type || 'REGULAR'; if (types[t] !== undefined) types[t]++ }) })
 
-      return NextResponse.json({ movies: Object.values(byMovie).sort((a: any, b: any) => b.revenue - a.revenue) })
+      return NextResponse.json({ seatTypes: types })
     }
 
-    if (type === 'cancellations') {
-      const cancellations = await db.cancellation.findMany({
-        where: { cancelledAt: { gte: fromDate, lte: toDate } },
-        include: {
-          booking: { include: { show: { include: { movie: true } } } },
-        },
-        orderBy: { cancelledAt: 'desc' },
+    // Forecasting
+    if (type === 'forecasting') {
+      const days = Array(7).fill(0).map((_, i) => {
+        const d = subDays(new Date(), 6 - i)
+        d.setHours(0, 0, 0, 0)
+        return d
       })
-      const totalRefund = cancellations.reduce((s, c) => s + c.refundAmount, 0)
-      return NextResponse.json({ cancellations, totalRefund, count: cancellations.length })
+      const daily = await Promise.all(days.map(async d => {
+        const end = new Date(d.getTime() + 86400000)
+        const agg = await db.booking.aggregate({ where: { createdAt: { gte: d, lte: end }, status: 'CONFIRMED' }, _sum: { finalAmount: true } })
+        return { date: format(d, 'EEE'), revenue: agg._sum.finalAmount || 0 }
+      }))
+
+      const revenues = daily.map(d => d.revenue)
+      const avg = revenues.reduce((a, b) => a + b, 0) / 7
+
+      return NextResponse.json({
+        last7Days: daily,
+        avgDailyRevenue: Math.round(avg),
+        trend: revenues[6] >= revenues[0] ? 'up' : 'down'
+      })
     }
 
-    return NextResponse.json({ error: 'Unknown report type' }, { status: 400 })
+    // CSV Export
+    if (exportFormat === 'csv') {
+      const bookings = await db.booking.findMany({
+        where: { createdAt: { gte: fromDate, lte: toDate }, status: 'CONFIRMED' },
+        include: { show: { include: { movie: true } } },
+        orderBy: { createdAt: 'desc' }
+      })
+
+      const csv = 'Ref,Date,Movie,Amount\n' + bookings.map(b => `${b.bookingRef},${format(b.createdAt, 'yyyy-MM-dd')},${b.show.movie.title},${b.finalAmount}`).join('\n')
+
+      return new NextResponse(csv, { headers: { 'Content-Type': 'text/csv', 'Content-Disposition': 'attachment; filename="bookings.csv"' } })
+    }
+
+    // PDF Export (HTML)
+    if (exportFormat === 'pdf') {
+      const bookings = await db.booking.findMany({
+        where: { createdAt: { gte: fromDate, lte: toDate }, status: 'CONFIRMED' },
+        include: { show: { include: { movie: true } }, bookingSeats: true }
+      })
+
+      const revenue = bookings.reduce((s, b) => s + b.finalAmount, 0)
+      const html = `<!DOCTYPE html><html><head><style>body{font-family:Arial;padding:20px}.header{background:#1a1a2e;color:white;padding:20px}.kpi{display:flex;gap:20px;margin:20px 0}.kpi>div{background:#f5f5f5;padding:20px;border-radius:8px;flex:1;text-align:center}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#1a1a2e;color:white}</style></head><body><div class="header"><h1>CinePOS Report</h1><p>${format(fromDate, 'yyyy-MM-dd')} - ${format(toDate, 'yyyy-MM-dd')}</p></div><div class="kpi"><div><strong>₹${revenue.toLocaleString()}</strong><p>Revenue</p></div><div><strong>${bookings.length}</strong><p>Bookings</p></div></div><table><tr><th>Ref</th><th>Date</th><th>Movie</th><th>Amount</th>${bookings.slice(0, 30).map(b => `<tr><td>${b.bookingRef}</td><td>${format(b.createdAt, 'dd/MM/yy')}</td><td>${b.show.movie.title}</td><td>₹${b.finalAmount}</td></tr>`).join('')}</table></body></html>`
+
+      return new NextResponse(html, { headers: { 'Content-Type': 'text/html', 'Content-Disposition': 'attachment; filename="report.html"' } })
+    }
+
+    return NextResponse.json({})
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }

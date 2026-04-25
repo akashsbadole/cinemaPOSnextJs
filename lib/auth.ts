@@ -13,6 +13,7 @@ export interface SessionUser {
   name: string
   email: string
   role: string
+  theaterId?: string | null
 }
 
 export async function createToken(user: SessionUser): Promise<string> {
@@ -36,7 +37,24 @@ export async function getSession(): Promise<SessionUser | null> {
   const cookieStore = cookies()
   const token = cookieStore.get('cinepos-token')?.value
   if (!token) return null
-  return verifyToken(token)
+  
+  const payload = await verifyToken(token)
+  if (!payload) return null
+  
+  // Load fresh user data including theaterId
+  const user = await db.user.findUnique({
+    where: { id: payload.id },
+    select: { id: true, name: true, email: true, role: true, theaterId: true }
+  })
+  
+  if (!user) return null
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    theaterId: user.theaterId,
+  }
 }
 
 export async function login(email: string, password: string) {

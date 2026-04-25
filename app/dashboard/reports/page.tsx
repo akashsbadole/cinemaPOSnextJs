@@ -2,6 +2,8 @@
 // app/dashboard/reports/page.tsx
 import { useEffect, useState } from 'react'
 import { format, subDays } from 'date-fns'
+import { useI18n } from '@/lib/i18n'
+import { useUIStore } from '@/lib/store'
 
 export default function ReportsPage() {
   const [tab, setTab] = useState<'revenue' | 'cancellations' | 'occupancy'>('revenue')
@@ -9,6 +11,8 @@ export default function ReportsPage() {
   const [to, setTo] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(false)
+  const t = useI18n()
+  const { language, setLanguage } = useUIStore()
 
   const load = () => {
     setLoading(true)

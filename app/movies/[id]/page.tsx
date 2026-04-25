@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
+import { useI18n } from '@/lib/i18n'
+import { useUIStore } from '@/lib/store'
 
 export default function MovieDetailsPage() {
   const { id } = useParams()
@@ -10,6 +12,8 @@ export default function MovieDetailsPage() {
   const [shows, setShows] = useState([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+  const t = useI18n()
+  const { language, setLanguage } = useUIStore()
 
   useEffect(() => {
     Promise.all([
@@ -22,12 +26,25 @@ export default function MovieDetailsPage() {
     })
   }, [id])
 
-  if (loading) return <div style={{ padding: 50, textAlign: 'center' }}>Loading movie details...</div>
-  if (!movie) return <div style={{ padding: 50, textAlign: 'center' }}>Movie not found</div>
+  if (loading) return <div style={{ padding: 50, textAlign: 'center' }}>{t('common.loading')}</div>
+  if (!movie) return <div style={{ padding: 50, textAlign: 'center' }}>{t('common.error')}</div>
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)' }}>
-      {/* Hero Header */}
+      {/* Nav */}
+      <nav style={{ height: 64, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', padding: '0 5%', justifyContent: 'space-between' }}>
+        <Link href="/movies" style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 900, color: 'var(--accent)', textDecoration: 'none' }}>← Back</Link>
+        <select
+          value={language}
+          onChange={(e) => setLanguage(e.target.value as any)}
+          style={{ background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', fontSize: 12, cursor: 'pointer' }}
+        >
+          <option value="en">EN</option>
+          <option value="hi">HI</option>
+          <option value="te">TE</option>
+          <option value="ta">TA</option>
+        </select>
+      </nav>
       <div style={{ height: 400, position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, background: `url(${movie.posterUrl}) center/cover no-repeat`, filter: 'blur(40px) brightness(0.3)', transform: 'scale(1.1)' }} />
         <div style={{ position: 'relative', height: '100%', display: 'flex', alignItems: 'flex-end', padding: '0 5% 40px', gap: 40 }}>
@@ -47,11 +64,11 @@ export default function MovieDetailsPage() {
 
       <div style={{ padding: '60px 5%', display: 'grid', gridTemplateColumns: '1fr 300px', gap: 60 }}>
         <div>
-          <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 32 }}>Select Show Time</h2>
+          <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 32 }}>{t('booking.selectShow')}</h2>
 
           {shows.length === 0 ? (
             <div style={{ padding: 40, background: 'var(--surface)', borderRadius: 12, textAlign: 'center', color: 'var(--muted)' }}>
-              No shows scheduled for this movie yet.
+              {t('common.noData')}
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>

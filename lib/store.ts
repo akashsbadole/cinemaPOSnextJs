@@ -97,9 +97,12 @@ export const useBookingStore = create<BookingState>()(
 interface UIState {
   sidebarOpen: boolean
   theme: 'dark' | 'light'
+  language: 'en' | 'hi' | 'te' | 'ta'
   setSidebarOpen: (open: boolean) => void
   toggleSidebar: () => void
   setTheme: (t: 'dark' | 'light') => void
+  toggleTheme: () => void
+  setLanguage: (l: 'en' | 'hi' | 'te' | 'ta') => void
 }
 
 export const useUIStore = create<UIState>()(
@@ -107,9 +110,12 @@ export const useUIStore = create<UIState>()(
     (set) => ({
       sidebarOpen: true,
       theme: 'dark',
+      language: 'en',
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
       toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
       setTheme: (theme) => set({ theme }),
+      toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
+      setLanguage: (language) => set({ language }),
     }),
     { name: 'cinepos-ui' }
   )

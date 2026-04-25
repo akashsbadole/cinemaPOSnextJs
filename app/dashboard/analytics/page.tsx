@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts'
 import { format, subDays } from 'date-fns'
+import { useI18n } from '@/lib/i18n'
+import { useUIStore } from '@/lib/store'
 
 const COLORS_ARR = ['#E8A020', '#3D7EFF', '#20C878', '#9B59F5', '#E84040']
 
@@ -12,6 +14,8 @@ export default function AnalyticsPage() {
   const [movieStats, setMovieStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [dateRange, setDateRange] = useState('7')
+  const t = useI18n()
+  const { language, setLanguage } = useUIStore()
 
   const fromDate = format(subDays(new Date(), parseInt(dateRange)), 'yyyy-MM-dd')
   const toDate = format(new Date(), 'yyyy-MM-dd')
