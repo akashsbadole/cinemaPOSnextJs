@@ -14,7 +14,7 @@ export default function AnalyticsPage() {
   const [movieStats, setMovieStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [dateRange, setDateRange] = useState('7')
-  const t = useI18n()
+  const { t } = useI18n()
   const { language, setLanguage } = useUIStore()
 
   const fromDate = format(subDays(new Date(), parseInt(dateRange)), 'yyyy-MM-dd')

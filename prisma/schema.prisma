@@ -26,6 +26,7 @@ model User {
   events    Event[] @relation("UserEvents")
   ticketResales TicketResale[] @relation("TicketResaleSeller")
   reviews   Review[] @relation("ReviewUser")
+  movieReviews MovieReview[] @relation("MovieReviewUser")
   waitlist  Waitlist[] @relation("WaitlistUser")
   eventOrganizer EventOrganizer? @relation("EventOrganizerProfile")
   resalesBuyer TicketResale[] @relation("TicketResaleBuyer")
@@ -112,6 +113,7 @@ model Movie {
   updatedAt   DateTime  @updatedAt
 
   shows       Show[]
+  movieReviews MovieReview[] @relation("MovieReview")
 
   @@map("movies")
 }
@@ -152,21 +154,23 @@ model SeatLock {
 }
 
 model Booking {
-  id             String   @id @default(cuid())
-  bookingRef     String   @unique
-  userId         String?
-  showId         String?
-  customerName   String?
-  customerEmail  String?
-  customerPhone  String?
-  status         String   @default("PENDING")
-  totalAmount    Float
-  discountAmount Float    @default(0)
-  finalAmount    Float
-  channel        String   @default("POS")
-  notes          String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  bookingRef         String   @unique
+  userId             String?
+  showId             String?
+  eventId            String?
+  customerName       String?
+  customerEmail      String?
+  customerPhone      String?
+  status             String   @default("PENDING")
+  totalAmount        Float
+  discountAmount     Float    @default(0)
+  finalAmount        Float
+  cancellationProtect Boolean  @default(false)
+  channel            String   @default("POS")
+  notes              String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   user           User?         @relation("BookingUser", fields: [userId], references: [id])
   show           Show?         @relation(fields: [showId], references: [id])
@@ -175,7 +179,6 @@ model Booking {
   payment        Payment?      @relation("BookingPayment")
   cancellation   Cancellation? @relation("BookingCancellation")
   event          Event?        @relation("BookingEvent", fields: [eventId], references: [id])
-  eventId        String?
   tickets        Ticket[]      @relation("BookingTicket")
   ticketResales  TicketResale[] @relation("TicketResaleOriginalBooking")
 
@@ -305,15 +308,16 @@ model Event {
   eventType     String   // Single-day, Multi-day, Recurring
   startDate     DateTime
   endDate       DateTime
-  venueId       String
-  organizerId   String
-  posterUrl     String?
-  bannerUrl     String?
-  status        String   @default("DRAFT") // DRAFT, PUBLISHED, LIVE, COMPLETED, CANCELLED
-  capacity      Int
-  refundPolicy  String   // Full, Partial, None
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  venueId      String
+  organizerId  String
+  posterUrl    String?
+  bannerUrl   String?
+  trailerUrl  String?
+  status      String   @default("DRAFT") // DRAFT, PUBLISHED, LIVE, COMPLETED, CANCELLED
+  capacity    Int
+  refundPolicy String   // Full, Partial, None
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   venue         Venue    @relation(fields: [venueId], references: [id])
   organizer     User     @relation("UserEvents", fields: [organizerId], references: [id])
@@ -507,6 +511,20 @@ model Review {
   customer  User     @relation("ReviewUser", fields: [customerId], references: [id])
 
   @@map("reviews")
+}
+
+model MovieReview {
+  id        String   @id @default(cuid())
+  movieId   String
+  customerId String
+  rating    Int      // 1-5
+  comment   String?
+  createdAt DateTime @default(now())
+
+  movie     Movie    @relation("MovieReview", fields: [movieId], references: [id])
+  customer  User     @relation("MovieReviewUser", fields: [customerId], references: [id])
+
+  @@map("movie_reviews")
 }
 
 model EventOrganizer {

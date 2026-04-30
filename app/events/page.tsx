@@ -12,6 +12,8 @@ export default function EventsPage() {
     maxPrice: '',
     dateFrom: '',
     dateTo: '',
+    city: '',
+    country: '',
   })
 
   useEffect(() => {
@@ -27,6 +29,8 @@ export default function EventsPage() {
     if (filters.maxPrice) params.append('maxPrice', filters.maxPrice)
     if (filters.dateFrom) params.append('startAfter', filters.dateFrom)
     if (filters.dateTo) params.append('startBefore', filters.dateTo)
+    if (filters.city) params.append('city', filters.city)
+    if (filters.country) params.append('country', filters.country)
 
     try {
       const res = await fetch(`/api/events?${params}`)
@@ -96,6 +100,20 @@ export default function EventsPage() {
           onChange={(e) => updateFilter('maxPrice', e.target.value)}
           style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)', padding: '10px 16px', borderRadius: 8, width: 120 }}
         />
+        <input
+          type="text"
+          placeholder="City"
+          value={filters.city}
+          onChange={(e) => updateFilter('city', e.target.value)}
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)', padding: '10px 16px', borderRadius: 8, minWidth: 120 }}
+        />
+        <input
+          type="text"
+          placeholder="Country"
+          value={filters.country}
+          onChange={(e) => updateFilter('country', e.target.value)}
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)', padding: '10px 16px', borderRadius: 8, minWidth: 120 }}
+        />
       </div>
 
       {/* Events Grid */}
@@ -118,6 +136,8 @@ export default function EventsPage() {
                 category={event.category}
                 startDate={event.startDate}
                 venueName={event.venue?.name}
+                city={event.venue?.city}
+                country={event.venue?.country}
                 posterUrl={event.posterUrl}
                 priceRange={priceRange}
               />

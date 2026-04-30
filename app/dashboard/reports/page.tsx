@@ -11,7 +11,7 @@ export default function ReportsPage() {
   const [to, setTo] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(false)
-  const t = useI18n()
+  const { t } = useI18n()
   const { language, setLanguage } = useUIStore()
 
   const load = () => {

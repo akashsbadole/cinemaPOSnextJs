@@ -39,6 +39,7 @@ export const createEventSchema = z.object({
   venueId: z.string(),
   posterUrl: z.string().url().optional().or(z.literal('')),
   bannerUrl: z.string().url().optional().or(z.literal('')),
+  trailerUrl: z.string().url().optional().or(z.literal('')),
   capacity: z.number().int().positive(),
   refundPolicy: z.enum(refundPolicies).default('NONE'),
 })
@@ -53,6 +54,7 @@ export const updateEventSchema = z.object({
   venueId: z.string().optional(),
   posterUrl: z.string().url().optional().or(z.literal('')).nullable(),
   bannerUrl: z.string().url().optional().or(z.literal('')).nullable(),
+  trailerUrl: z.string().url().optional().or(z.literal('')).nullable(),
   capacity: z.number().int().positive().optional(),
   refundPolicy: z.enum(refundPolicies).optional(),
   status: z.enum(eventStatuses).optional(),

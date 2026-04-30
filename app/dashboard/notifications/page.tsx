@@ -10,7 +10,7 @@ export default function NotificationsPage() {
   const [filter, setFilter] = useState<{ status?: string; channel?: string }>({})
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
-  const t = useI18n()
+  const { t } = useI18n()
   const { language, setLanguage } = useUIStore()
 
   useEffect(() => {

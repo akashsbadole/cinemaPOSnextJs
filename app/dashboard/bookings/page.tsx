@@ -20,7 +20,7 @@ export default function BookingsPage() {
   const [cancelReason, setCancelReason] = useState('')
   const [showCancel, setShowCancel] = useState(false)
   const [toast, setToast] = useState('')
-  const t = useI18n()
+  const { t } = useI18n()
   const { language, setLanguage } = useUIStore()
 
   const load = () => {
@@ -40,21 +40,25 @@ export default function BookingsPage() {
   useEffect(() => { setPage(1) }, [search, status, date])
   useEffect(() => { load() }, [page, search, status, date])
 
-  const cancelBooking = async () => {
-    if (!selected) return
-    setCancelling(true)
-    const res = await fetch(`/api/bookings/${selected.id}/cancel`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason: cancelReason, refundMethod: 'WALLET' }),
-    })
-    const data = await res.json()
-    setCancelling(false)
-    setShowCancel(false)
-    setSelected(null)
-    if (res.ok) showToast(`Cancelled. Refund: ₹${data.refundAmount}`)
-    else showToast(data.error || 'Failed')
-    load()
-  }
+   const cancelBooking = async () => {
+     if (!selected) return
+     setCancelling(true)
+     const res = await fetch(`/api/bookings/${selected.id}/cancel`, {
+       method: 'POST', headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({ 
+         reason: cancelReason, 
+         refundMethod: 'WALLET',
+         cancellationProtect: document.getElementById('cancellationProtectToggle')?.checked || false
+       }),
+     })
+     const data = await res.json()
+     setCancelling(false)
+     setShowCancel(false)
+     setSelected(null)
+     if (res.ok) showToast(`Cancelled. Refund: ₹${data.refundAmount}`)
+     else showToast(data.error || 'Failed')
+     load()
+   }
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 4000) }
   const openTicket = (b: any, format?: string) => {
@@ -211,10 +215,29 @@ export default function BookingsPage() {
             <div style={{ background: 'rgba(232,160,32,0.1)', border: '1px solid rgba(232,160,32,0.3)', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: 'var(--accent)', marginBottom: 16 }}>
               ⚠️ Refund: 100% if 60+ mins before show · 50% if within 1hr · No refund after show starts
             </div>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--muted)', fontFamily: 'var(--font-mono)', marginBottom: 6 }}>Reason</label>
-              <input className="cp-input" value={cancelReason} onChange={e => setCancelReason(e.target.value)} placeholder="Reason for cancellation..."/>
-            </div>
+             <div style={{ marginBottom: 16 }}>
+               <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--muted)', fontFamily: 'var(--font-mono)', marginBottom: 6 }}>Reason</label>
+               <input className="cp-input" value={cancelReason} onChange={e => setCancelReason(e.target.value)} placeholder="Reason for cancellation..."/>
+             </div>
+             
+             {/* Cancellation Protect Option */}
+             {selected.cancellationProtect ? (
+               <div style={{ background: 'rgba(232,160,32,0.1)', border: '1px solid rgba(232,160,32,0.3)', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: 'var(--accent)', marginBottom: 16 }}>
+                 ✅ Cancellation Protect Active: Flexible cancellation with reduced fees
+               </div>
+             ) : (
+               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                 <input
+                   type="checkbox"
+                   id="cancellationProtectToggle"
+                   checked={false}
+                   onChange={(e) => { /* Will be handled in cancelBooking */ }}
+                 />
+                 <label htmlFor="cancellationProtectToggle" style={{ fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+                   Add Cancellation Protect (+₹{Math.max(20, selected.finalAmount * 0.1)}) for flexible cancellation
+                 </label>
+               </div>
+             )}
             <div style={{ display: 'flex', gap: 10 }}>
               <button className="btn btn-danger" style={{ flex: 1 }} onClick={cancelBooking} disabled={cancelling}>
                 {cancelling ? <span className="spinner"/> : 'Confirm Cancel'}

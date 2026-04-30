@@ -3,14 +3,15 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/auth'
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getSession()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
+    const { id } = await params
     const booking = await db.booking.findFirst({
       where: {
-        OR: [{ id: params.id }, { bookingRef: params.id }],
+        OR: [{ id }, { bookingRef: id }],
       },
       include: {
         show: { include: { movie: true, screen: { include: { theater: true } } } },

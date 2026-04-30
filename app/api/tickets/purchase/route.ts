@@ -29,7 +29,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json()
-    const { eventId, tierId, quantity, customerName, customerEmail, customerPhone, paymentMethod, couponCode, sessionId } = body
+    const { eventId, tierId, quantity, customerName, customerEmail, customerPhone, paymentMethod, couponCode, sessionId, cancellationProtect, cancellationProtectFee } = body
 
     // Validate input
     if (!eventId || !tierId || !quantity || quantity < 1 || quantity > 10) {
@@ -113,7 +113,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const finalAmount = Math.max(0, totalAmount - discountAmount)
+    const finalAmount = Math.max(0, totalAmount - discountAmount) + (cancellationProtect ? (cancellationProtectFee || 0) : 0)
     const bookingRef = `BK${new Date().toISOString().slice(2, 10).replace(/-/g, '')}${Math.floor(Math.random() * 9000 + 1000)}`
 
     // Create booking and related records in a transaction
@@ -132,6 +132,8 @@ export async function POST(req: Request) {
           totalAmount,
           discountAmount,
           finalAmount,
+          cancellationProtect: cancellationProtect || false,
+          cancellationProtectFee: cancellationProtect ? (cancellationProtectFee || 0) : 0,
           channel: 'ONLINE',
         },
         include: { event: true },

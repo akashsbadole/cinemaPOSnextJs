@@ -16,7 +16,7 @@ export default function StaffPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
-  const t = useI18n()
+  const { t } = useI18n()
   const { language, setLanguage } = useUIStore()
 
   const load = () => { setLoading(true); fetch('/api/staff').then(r => r.json()).then(d => { setStaff(d.staff || []); setLoading(false) }) }

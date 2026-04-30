@@ -22,6 +22,8 @@ const schema = z.object({
     foodItemId: z.string(),
     quantity: z.number().int().min(1).max(99),
   })).optional(),
+  cancellationProtect: z.boolean().default(false),
+  cancellationProtectFee: z.number().default(0),
 })
 
 export async function GET(req: Request) {
@@ -166,7 +168,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const finalAmount = Math.max(0, totalAmount - discountAmount)
+    const finalAmount = Math.max(0, totalAmount - discountAmount) + (data.cancellationProtect ? data.cancellationProtectFee : 0)
     const bookingRef = await generateBookingRef()
 
     // Create booking in transaction
@@ -183,6 +185,8 @@ export async function POST(req: Request) {
           totalAmount,
           discountAmount,
           finalAmount,
+          cancellationProtect: data.cancellationProtect,
+          cancellationProtectFee: data.cancellationProtectFee,
           channel: data.channel,
           bookingSeats: { create: seatPrices },
           bookingItems: foodPrices.length > 0 ? { create: foodPrices } : undefined,

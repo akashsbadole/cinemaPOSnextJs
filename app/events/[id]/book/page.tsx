@@ -16,6 +16,8 @@ export default function BookingPage() {
   const [tier, setTier] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [settings, setSettings] = useState<any>(null)
+  const [cancellationProtect, setCancellationProtect] = useState(false)
   const [form, setForm] = useState({
     customerName: '',
     customerEmail: '',
@@ -28,30 +30,34 @@ export default function BookingPage() {
   const [discount, setDiscount] = useState(0)
   const [final, setFinal] = useState(0)
 
+  const cancellationProtectFee = settings?.CANCELLATION_PROTECT_FEE ? parseFloat(settings.CANCELLATION_PROTECT_FEE) : 25
+  const cancellationProtectEnabled = settings?.CANCELLATION_PROTECT_ENABLED === 'true'
+
   useEffect(() => {
-    fetch(`/api/events/${id}`)
-      .then(r => r.json())
-      .then(data => {
-        setEvent(data.event)
-        const foundTier = data.event.ticketTiers?.find((t: any) => t.id === tierId)
-        setTier(foundTier || null)
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
+    Promise.all([
+      fetch(`/api/events/${id}`).then(r => r.json()),
+      fetch('/api/settings').then(r => r.json()),
+    ]).then(([eventData, settingsData]) => {
+      setEvent(eventData.event)
+      const foundTier = eventData.event.ticketTiers?.find((t: any) => t.id === tierId)
+      setTier(foundTier || null)
+      setSettings(settingsData)
+      setLoading(false)
+    }).catch(() => setLoading(false))
   }, [id, tierId])
 
   useEffect(() => {
     if (!tier) return
     const base = tier.currentPrice * form.quantity
     let disc = 0
-    // Simple coupon: 10% off for code EVENT10
     if (form.couponCode?.toUpperCase() === 'EVENT10') {
       disc = base * 0.1
     }
     setTotal(base)
     setDiscount(disc)
-    setFinal(base - disc)
-  }, [tier, form.quantity, form.couponCode])
+    const withProtect = cancellationProtect ? base - disc + cancellationProtectFee : base - disc
+    setFinal(Math.max(0, withProtect))
+  }, [tier, form.quantity, form.couponCode, cancellationProtect])
 
   const handleChange = (e: any) => {
     const { name, value } = e.target
@@ -78,13 +84,14 @@ export default function BookingPage() {
           customerPhone: form.customerPhone,
           paymentMethod: form.paymentMethod,
           couponCode: form.couponCode || undefined,
+          cancellationProtect,
+          cancellationProtectFee: cancellationProtect ? cancellationProtectFee : 0,
         }),
       })
       const data = await res.json()
       if (!res.ok) {
         throw new Error(data.error || 'Booking failed')
       }
-      // Redirect to my tickets page or confirmation
       router.push(`/my-tickets?bookingRef=${data.booking.bookingRef}`)
     } catch (err: any) {
       alert(`Error: ${err.message}`)
@@ -136,6 +143,12 @@ export default function BookingPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, color: '#20C878' }}>
                 <span>Discount</span>
                 <span>- ₹{discount}</span>
+              </div>
+            )}
+            {cancellationProtectEnabled && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
+                <span style={{ color: 'var(--accent)' }}>Cancellation Protect</span>
+                <span style={{ fontWeight: 600 }}>₹{cancellationProtectFee}</span>
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: 18, marginTop: 12, paddingTop: 12, borderTop: '1px dashed var(--border)' }}>
@@ -210,6 +223,25 @@ export default function BookingPage() {
                 style={{ width: '100%', padding: 12, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)' }}
               />
             </div>
+
+            {cancellationProtectEnabled && (
+              <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 12 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={cancellationProtect}
+                    onChange={(e) => setCancellationProtect(e.target.checked)}
+                    style={{ width: 18, height: 18 }}
+                  />
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>Add Cancellation Protect</div>
+                    <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                      Cancel anytime for {settings?.CANCELLATION_PROTECT_REFUND_PERCENT || 80}% refund
+                    </div>
+                  </div>
+                </label>
+              </div>
+            )}
 
             <button
               onClick={handleSubmit}

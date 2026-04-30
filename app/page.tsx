@@ -1,61 +1,124 @@
-'use client'
+"use client";
 // app/page.tsx
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useI18n } from '@/lib/i18n'
-import { useUIStore } from '@/lib/store'
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useI18n } from "@/lib/i18n";
+import { useUIStore } from "@/lib/store";
 
 export default function LandingPage() {
-  const [location, setLocation] = useState<string | null>(null)
-  const [showLocationModal, setShowLocationModal] = useState(false)
-  const [movies, setMovies] = useState([])
-  const [loading, setLoading] = useState(true)
-  const router = useRouter()
-  const t = useI18n()
-  const { language, setLanguage, theme, toggleTheme } = useUIStore()
+  const [location, setLocation] = useState<string | null>(null);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [movies, setMovies] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const { t } = useI18n();
+  const { language, setLanguage, theme, toggleTheme } = useUIStore();
 
   useEffect(() => {
-    const savedLocation = localStorage.getItem('user-location')
+    const savedLocation = localStorage.getItem("user-location");
     if (!savedLocation) {
-      setShowLocationModal(true)
+      setShowLocationModal(true);
     } else {
-      setLocation(savedLocation)
+      setLocation(savedLocation);
     }
 
-    fetch('/api/movies').then(r => r.json()).then(data => {
-      setMovies(data.movies || [])
-      setLoading(false)
-    })
-  }, [])
+    fetch("/api/movies")
+      .then((r) => r.json())
+      .then((data) => {
+        setMovies(data.movies || []);
+        setLoading(false);
+      });
+  }, []);
 
   function saveLocation(loc: string) {
-    localStorage.setItem('user-location', loc)
-    setLocation(loc)
-    setShowLocationModal(false)
+    localStorage.setItem("user-location", loc);
+    setLocation(loc);
+    setShowLocationModal(false);
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)' }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "var(--bg)",
+        color: "var(--text)",
+      }}
+    >
       {/* Navigation */}
-      <nav style={{
-        height: 72, borderBottom: '1px solid var(--border)', background: 'rgba(10,10,10,0.8)',
-        backdropFilter: 'blur(10px)', position: 'sticky', top: 0, zIndex: 100,
-        display: 'flex', alignItems: 'center', padding: '0 5%'
-      }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 900, color: 'var(--accent)', marginRight: 48 }}>
-          🎬 {t('app.name')}
+      <nav
+        style={{
+          height: 72,
+          borderBottom: "1px solid var(--border)",
+          background: "rgba(10,10,10,0.8)",
+          backdropFilter: "blur(10px)",
+          position: "sticky",
+          top: 0,
+          zIndex: 100,
+          display: "flex",
+          alignItems: "center",
+          padding: "0 5%",
+        }}
+      >
+        <div
+          style={{
+            fontFamily: "var(--font-display)",
+            fontSize: 24,
+            fontWeight: 900,
+            color: "var(--accent)",
+            marginRight: 48,
+          }}
+        >
+          🎬 {t("app.name")}
         </div>
-        <div style={{ display: 'flex', gap: 32, flex: 1 }}>
-          <Link href="/" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 600, fontSize: 14 }}>{t('nav.home')}</Link>
-          <Link href="/movies" style={{ color: 'var(--muted)', textDecoration: 'none', fontWeight: 500, fontSize: 14 }}>{t('nav.movies')}</Link>
-          <a href="#contact" style={{ color: 'var(--muted)', textDecoration: 'none', fontWeight: 500, fontSize: 14 }}>{t('landing.contact')}</a>
+        <div style={{ display: "flex", gap: 32, flex: 1 }}>
+          <Link
+            href="/"
+            style={{
+              color: "var(--accent)",
+              textDecoration: "none",
+              fontWeight: 600,
+              fontSize: 14,
+            }}
+          >
+            {t("nav.home")}
+          </Link>
+          <Link
+            href="/movies"
+            style={{
+              color: "var(--muted)",
+              textDecoration: "none",
+              fontWeight: 500,
+              fontSize: 14,
+            }}
+          >
+            {t("nav.movies")}
+          </Link>
+          <a
+            href="#contact"
+            style={{
+              color: "var(--muted)",
+              textDecoration: "none",
+              fontWeight: 500,
+              fontSize: 14,
+            }}
+          >
+            {t("landing.contact")}
+          </a>
         </div>
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+        <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
           <select
             value={language}
             onChange={(e) => setLanguage(e.target.value as any)}
-            style={{ background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', fontSize: 12, cursor: 'pointer' }}
+            style={{
+              background: "var(--surface)",
+              color: "var(--text)",
+              border: "1px solid var(--border)",
+              borderRadius: 6,
+              padding: "4px 8px",
+              fontSize: 12,
+              cursor: "pointer",
+            }}
           >
             <option value="en">EN</option>
             <option value="hi">HI</option>
@@ -64,51 +127,179 @@ export default function LandingPage() {
           </select>
           <div
             onClick={() => setShowLocationModal(true)}
-            style={{ cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)', padding: '6px 12px', borderRadius: 20, border: '1px solid var(--border)' }}
+            style={{
+              cursor: "pointer",
+              fontSize: 13,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              background: "var(--surface)",
+              padding: "6px 12px",
+              borderRadius: 20,
+              border: "1px solid var(--border)",
+            }}
           >
-            📍 {location || t('common.selectCity')}
+            📍 {location || t("common.selectCity")}
           </div>
-          <Link href="/login" style={{ color: 'var(--text)', textDecoration: 'none', fontSize: 14, fontWeight: 500 }}>{t('auth.login')}</Link>
-          <Link href="/register" className="btn btn-primary btn-sm">{t('auth.register')}</Link>
+          <Link
+            href="/login"
+            style={{
+              color: "var(--text)",
+              textDecoration: "none",
+              fontSize: 14,
+              fontWeight: 500,
+            }}
+          >
+            {t("auth.login")}
+          </Link>
+          <Link href="/register" className="btn btn-primary btn-sm">
+            {t("auth.register")}
+          </Link>
         </div>
       </nav>
 
       {/* Hero */}
-      <section style={{ padding: '80px 5%', textAlign: 'center', background: 'linear-gradient(to bottom, var(--surface), var(--bg))' }}>
-        <h1 style={{ fontSize: 'clamp(32px, 5vw, 64px)', fontWeight: 900, marginBottom: 24, letterSpacing: '-1px' }}>
-          {t('landing.experience')}
+      <section
+        style={{
+          padding: "80px 5%",
+          textAlign: "center",
+          background: "linear-gradient(to bottom, var(--surface), var(--bg))",
+        }}
+      >
+        <h1
+          style={{
+            fontSize: "clamp(32px, 5vw, 64px)",
+            fontWeight: 900,
+            marginBottom: 24,
+            letterSpacing: "-1px",
+          }}
+        >
+          {t("landing.experience")}
         </h1>
-        <p style={{ fontSize: 18, color: 'var(--muted)', maxWidth: 600, margin: '0 auto 40px' }}>
-          {t('app.tagline')}
+        <p
+          style={{
+            fontSize: 18,
+            color: "var(--muted)",
+            maxWidth: 600,
+            margin: "0 auto 40px",
+          }}
+        >
+          {t("app.tagline")}
         </p>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 16 }}>
-          <button className="btn btn-primary" onClick={() => document.getElementById('movies')?.scrollIntoView({ behavior: 'smooth' })}>{t('landing.bookNow')}</button>
-          <button className="btn btn-ghost" style={{ border: '1px solid var(--border)' }}>{t('landing.viewSchedule')}</button>
+        <div style={{ display: "flex", justifyContent: "center", gap: 16 }}>
+          <button
+            className="btn btn-primary"
+            onClick={() =>
+              document
+                .getElementById("movies")
+                ?.scrollIntoView({ behavior: "smooth" })
+            }
+          >
+            {t("landing.bookNow")}
+          </button>
+          <button
+            className="btn btn-ghost"
+            style={{ border: "1px solid var(--border)" }}
+          >
+            {t("landing.viewSchedule")}
+          </button>
         </div>
       </section>
 
       {/* Movies Grid */}
-      <section id="movies" style={{ padding: '60px 5%' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40 }}>
-          <h2 style={{ fontSize: 28, fontWeight: 800 }}>{t('landing.nowShowing')}</h2>
-          <Link href="/movies" style={{ color: 'var(--accent)', textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>{t('landing.viewAllMovies')} →</Link>
+      <section id="movies" style={{ padding: "60px 5%" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 40,
+          }}
+        >
+          <h2 style={{ fontSize: 28, fontWeight: 800 }}>
+            {t("landing.nowShowing")}
+          </h2>
+          <Link
+            href="/movies"
+            style={{
+              color: "var(--accent)",
+              textDecoration: "none",
+              fontSize: 14,
+              fontWeight: 600,
+            }}
+          >
+            {t("landing.viewAllMovies")} →
+          </Link>
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 40 }}>{t('common.loading')}</div>
+          <div style={{ textAlign: "center", padding: 40 }}>
+            {t("common.loading")}
+          </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 32 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+              gap: 32,
+            }}
+          >
             {movies.map((movie: any) => (
-              <div key={movie.id} className="cp-card" style={{ border: 'none', background: 'transparent', cursor: 'pointer' }} onClick={() => router.push(`/movies/${movie.id}`)}>
-                <div style={{ aspectRatio: '2/3', borderRadius: 12, overflow: 'hidden', background: 'var(--surface)', marginBottom: 16, border: '1px solid var(--border)' }}>
+              <div
+                key={movie.id}
+                className="cp-card"
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                }}
+                onClick={() => router.push(`/movies/${movie.id}`)}
+              >
+                <div
+                  style={{
+                    aspectRatio: "2/3",
+                    borderRadius: 12,
+                    overflow: "hidden",
+                    background: "var(--surface)",
+                    marginBottom: 16,
+                    border: "1px solid var(--border)",
+                  }}
+                >
                   {movie.posterUrl ? (
-                    <img src={movie.posterUrl} alt={movie.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img
+                      src={movie.posterUrl}
+                      alt={movie.title}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                    />
                   ) : (
-                    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40 }}>🎬</div>
+                    <div
+                      style={{
+                        height: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 40,
+                      }}
+                    >
+                      🎬
+                    </div>
                   )}
                 </div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>{movie.title}</h3>
-                <div style={{ display: 'flex', gap: 8, fontSize: 12, color: 'var(--muted)' }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>
+                  {movie.title}
+                </h3>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    fontSize: 12,
+                    color: "var(--muted)",
+                  }}
+                >
                   <span>{movie.format}</span> • <span>{movie.language}</span>
                 </div>
               </div>
@@ -118,65 +309,163 @@ export default function LandingPage() {
       </section>
 
       {/* Contact Section */}
-      <section id="contact" style={{ padding: '80px 5%', borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
-        <div style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 60 }}>
+      <section
+        id="contact"
+        style={{
+          padding: "80px 5%",
+          borderTop: "1px solid var(--border)",
+          background: "var(--surface)",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 1000,
+            margin: "0 auto",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+            gap: 60,
+          }}
+        >
           <div>
-            <h2 style={{ fontSize: 32, fontWeight: 800, marginBottom: 24 }}>{t('landing.getInTouch')}</h2>
-            <p style={{ color: 'var(--muted)', marginBottom: 32 }}>{t('landing.contact')}</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={{ display: 'flex', gap: 12 }}>
+            <h2 style={{ fontSize: 32, fontWeight: 800, marginBottom: 24 }}>
+              {t("landing.getInTouch")}
+            </h2>
+            <p style={{ color: "var(--muted)", marginBottom: 32 }}>
+              {t("landing.contact")}
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ display: "flex", gap: 12 }}>
                 <span style={{ fontSize: 20 }}>📧</span>
                 <div>
-                  <div style={{ fontWeight: 600 }}>{t('landing.email')}</div>
-                  <div style={{ color: 'var(--muted)', fontSize: 14 }}>support@cinepos.com</div>
+                  <div style={{ fontWeight: 600 }}>{t("landing.email")}</div>
+                  <div style={{ color: "var(--muted)", fontSize: 14 }}>
+                    support@cinepos.com
+                  </div>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 12 }}>
+              <div style={{ display: "flex", gap: 12 }}>
                 <span style={{ fontSize: 20 }}>📞</span>
                 <div>
-                  <div style={{ fontWeight: 600 }}>{t('landing.phone')}</div>
-                  <div style={{ color: 'var(--muted)', fontSize: 14 }}>+91 98765 43210</div>
+                  <div style={{ fontWeight: 600 }}>{t("landing.phone")}</div>
+                  <div style={{ color: "var(--muted)", fontSize: 14 }}>
+                    +91 98765 43210
+                  </div>
                 </div>
               </div>
             </div>
           </div>
           <div className="cp-card" style={{ padding: 32 }}>
-            <form style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <input className="cp-input" placeholder={t('auth.name')} />
-              <input className="cp-input" type="email" placeholder={t('auth.email')} />
-              <textarea className="cp-input" rows={4} placeholder={t('landing.contact')} style={{ padding: 12 }}></textarea>
-              <button type="button" className="btn btn-primary">{t('notification.send')}</button>
+            <form style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <input className="cp-input" placeholder={t("auth.name")} />
+              <input
+                className="cp-input"
+                type="email"
+                placeholder={t("auth.email")}
+              />
+              <textarea
+                className="cp-input"
+                rows={4}
+                placeholder={t("landing.contact")}
+                style={{ padding: 12 }}
+              ></textarea>
+              <button type="button" className="btn btn-primary">
+                {t("notification.send")}
+              </button>
             </form>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer style={{ padding: '40px 5%', borderTop: '1px solid var(--border)', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-        © 2024 {t('app.name')}. All rights reserved.
+      <footer
+        style={{
+          padding: "40px 5%",
+          borderTop: "1px solid var(--border)",
+          textAlign: "center",
+          color: "var(--muted)",
+          fontSize: 13,
+        }}
+      >
+        © 2024 {t("app.name")}. All rights reserved.
       </footer>
 
       {/* Location Modal */}
       {showLocationModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}>
-          <div className="cp-card animate-fadeIn" style={{ maxWidth: 400, width: '100%', padding: 32 }}>
-            <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8, textAlign: 'center' }}>{t('landing.welcome')}</h2>
-            <p style={{ color: 'var(--muted)', textAlign: 'center', marginBottom: 24 }}>{t('landing.selectCity')}</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {['Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Pune', 'Chennai'].map(city => (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.8)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 200,
+            padding: 20,
+          }}
+        >
+          <div
+            className="cp-card animate-fadeIn"
+            style={{ maxWidth: 400, width: "100%", padding: 32 }}
+          >
+            <h2
+              style={{
+                fontSize: 24,
+                fontWeight: 800,
+                marginBottom: 8,
+                textAlign: "center",
+              }}
+            >
+              {t("landing.welcome")}
+            </h2>
+            <p
+              style={{
+                color: "var(--muted)",
+                textAlign: "center",
+                marginBottom: 24,
+              }}
+            >
+              {t("landing.selectCity")}
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {[
+                "Mumbai",
+                "Delhi",
+                "Bangalore",
+                "Hyderabad",
+                "Pune",
+                "Chennai",
+              ].map((city) => (
                 <button
                   key={city}
                   onClick={() => saveLocation(city)}
-                  style={{ padding: '12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', cursor: 'pointer', fontWeight: 500, transition: 'all 0.2s' }}
-                  onMouseOver={e => e.currentTarget.style.borderColor = 'var(--accent)'}
-                  onMouseOut={e => e.currentTarget.style.borderColor = 'var(--border)'}
-                >{city}</button>
+                  style={{
+                    padding: "12px",
+                    borderRadius: 8,
+                    border: "1px solid var(--border)",
+                    background: "var(--bg)",
+                    color: "var(--text)",
+                    cursor: "pointer",
+                    fontWeight: 500,
+                    transition: "all 0.2s",
+                  }}
+                  onMouseOver={(e) =>
+                    (e.currentTarget.style.borderColor = "var(--accent)")
+                  }
+                  onMouseOut={(e) =>
+                    (e.currentTarget.style.borderColor = "var(--border)")
+                  }
+                >
+                  {city}
+                </button>
               ))}
               <div style={{ marginTop: 8 }}>
                 <input
                   className="cp-input"
                   placeholder="Or enter city name..."
-                  onKeyDown={e => { if (e.key === 'Enter') saveLocation(e.currentTarget.value) }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveLocation(e.currentTarget.value);
+                  }}
                 />
               </div>
             </div>
@@ -184,5 +473,5 @@ export default function LandingPage() {
         </div>
       )}
     </div>
-  )
+  );
 }

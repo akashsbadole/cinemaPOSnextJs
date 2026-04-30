@@ -63,6 +63,7 @@ export async function PUT(
         venueId: data.venueId,
         posterUrl: data.posterUrl ?? undefined,
         bannerUrl: data.bannerUrl ?? undefined,
+        trailerUrl: data.trailerUrl ?? undefined,
         capacity: data.capacity,
         refundPolicy: data.refundPolicy,
         status: data.status,

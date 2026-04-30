@@ -140,6 +140,9 @@ const translations: Record<Language, Record<string, string>> = {
     'ticket.seats': 'Seat Numbers', 'ticket.totalPaid': 'TOTAL PAID',
     'ticket.scanAtEntry': 'Scan at Entry', 'ticket.arriveEarly': 'Arrive 15 mins before show',
     'ticket.noOutsideFood': 'No outside food allowed', 'ticket.nonTransferable': 'Ticket non-transferable',
+    'booking.cancellationProtect': 'Cancellation Protect',
+    'booking.cancellationProtectDescription': 'Get flexible cancellation options with reduced fees',
+    'booking.enableCancellationProtect': 'Enable Cancellation Protect',
   },
 
   hi: {

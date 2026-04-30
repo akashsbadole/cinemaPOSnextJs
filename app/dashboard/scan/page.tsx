@@ -15,7 +15,7 @@ export default function ScanTicketPage() {
   const [error, setError] = useState('')
   const [cameraActive, setCameraActive] = useState(false)
   const scannerRef = useRef<Html5Qrcode | null>(null)
-  const t = useI18n()
+  const { t } = useI18n()
   const { language, setLanguage } = useUIStore()
   const scannerDivRef = useRef<HTMLDivElement>(null)
 

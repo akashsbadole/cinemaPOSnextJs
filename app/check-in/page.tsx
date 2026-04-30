@@ -1,7 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { Html5QrcodeScanner } from 'html5-qrcode'
-import './check-in.css' // optional styling
 
 export default function CheckInPage() {
   const [scanResult, setScanResult] = useState<any>(null)

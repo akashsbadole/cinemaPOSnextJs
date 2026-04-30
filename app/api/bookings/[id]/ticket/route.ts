@@ -5,16 +5,17 @@ import { getSession } from '@/lib/auth'
 import { generateTicketHTML, generateTicketPDF, generateThermalTicket, TicketData } from '@/lib/ticket'
 import { format } from 'date-fns'
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getSession()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
+    const { id } = await params
     const { searchParams } = new URL(req.url)
     const formatType = searchParams.get('format') || 'html'
 
     const booking = await db.booking.findFirst({
-      where: { OR: [{ id: params.id }, { bookingRef: params.id }] },
+      where: { OR: [{ id }, { bookingRef: id }] },
       include: {
         show: { include: { movie: true, screen: { include: { theater: true } } } },
         bookingSeats: { include: { seat: true } },

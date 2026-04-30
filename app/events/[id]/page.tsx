@@ -47,6 +47,21 @@ export default function EventDetailPage() {
           ) : (
             <div style={{ height: 300, background: 'linear-gradient(135deg, #1a1a2e, #16213e)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64, marginBottom: 24 }}>🎟️</div>
           )}
+          
+          {/* Trailer Section */}
+          {event.trailerUrl && (
+            <div style={{ marginBottom: 24 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Watch Trailer</h3>
+              <div style={{ position: 'relative', paddingBottom: '56.25%', borderRadius: 12, overflow: 'hidden' }}>
+                <iframe
+                  src={event.trailerUrl.replace('watch?v=', 'embed/')}
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                  allowFullScreen
+                />
+              </div>
+            </div>
+          )}
+          
           <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 8 }}>{event.title}</h1>
           <p style={{ color: 'var(--muted)', marginBottom: 16 }}>
             <span style={{ textTransform: 'capitalize' }}>{event.category}</span> • {event.eventType?.replace('_', ' ')} • {event.status}

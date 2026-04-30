@@ -8,11 +8,13 @@ interface EventCardProps {
   category: string
   startDate: string
   venueName?: string
+  city?: string
+  country?: string
   posterUrl?: string | null
   priceRange?: string // e.g., "₹200 - ₹1000"
 }
 
-export default function EventCard({ id, title, description, category, startDate, venueName, posterUrl, priceRange }: EventCardProps) {
+export default function EventCard({ id, title, description, category, startDate, venueName, city, country, posterUrl, priceRange }: EventCardProps) {
   const formattedDate = new Date(startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 
   return (
@@ -27,7 +29,7 @@ export default function EventCard({ id, title, description, category, startDate,
           <span style={{ background: '#E8A020', color: '#000', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700, textTransform: 'uppercase' }}>{category}</span>
         </div>
         <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4, color: 'var(--text)' }}>{title}</h3>
-        <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>{formattedDate} {venueName ? `• ${venueName}` : ''}</p>
+        <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>{formattedDate} {venueName ? `• ${venueName}` : ''} {city ? `• ${city}` : ''} {country ? `, ${country}` : ''}</p>
         {description && <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{description}</p>}
         {priceRange && (
           <div style={{ marginTop: 8, fontWeight: 600, color: '#E8A020' }}>{priceRange}</div>

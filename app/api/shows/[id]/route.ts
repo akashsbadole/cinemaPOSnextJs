@@ -4,10 +4,11 @@ import { db } from '@/lib/db'
 import { getSession, hasPermission } from '@/lib/auth'
 import { getShowSeatStatus } from '@/lib/seat-lock'
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const show = await db.show.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         movie: true,
         screen: {
@@ -34,27 +35,29 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   }
 }
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getSession()
   if (!user || !hasPermission(user.role, 'MANAGER')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
   }
   try {
+    const { id } = await params
     const body = await req.json()
-    const show = await db.show.update({ where: { id: params.id }, data: body })
+    const show = await db.show.update({ where: { id }, data: body })
     return NextResponse.json({ show })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 400 })
   }
 }
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getSession()
   if (!user || !hasPermission(user.role, 'MANAGER')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
   }
   try {
-    await db.show.update({ where: { id: params.id }, data: { status: 'CANCELLED' } })
+    const { id } = await params
+    await db.show.update({ where: { id }, data: { status: 'CANCELLED' } })
     return NextResponse.json({ ok: true })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 400 })

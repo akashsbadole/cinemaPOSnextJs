@@ -18,7 +18,7 @@ export default function ShowsPage() {
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
   const [selectedTheaterId, setSelectedTheaterId] = useState('')
-  const t = useI18n()
+  const { t } = useI18n()
   const { language, setLanguage } = useUIStore()
 
   const loadShows = () => {

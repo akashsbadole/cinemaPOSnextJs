@@ -60,13 +60,12 @@ export async function PUT(
         })
       }
       // Re-fetch to include new features
-      return db.ticketTier.findUnique({
+      const updatedWithFeatures = await db.ticketTier.findUnique({
         where: { id },
         include: { section: true, features: true },
       })
+      return NextResponse.json({ tier: updatedWithFeatures })
     }
-
-    return updated
 
     return NextResponse.json({ tier: updated })
   } catch (e: any) {

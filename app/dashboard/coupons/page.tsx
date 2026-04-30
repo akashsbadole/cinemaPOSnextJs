@@ -15,7 +15,7 @@ export default function CouponsPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
-  const t = useI18n()
+  const { t } = useI18n()
   const { language, setLanguage } = useUIStore()
 
   const load = () => { setLoading(true); fetch('/api/coupons').then(r => r.json()).then(d => { setCoupons(d.coupons || []); setLoading(false) }) }

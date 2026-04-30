@@ -51,8 +51,8 @@ export default function OrganizerEventsPage() {
                 <Link href={`/organizer/events/${event.id}/analytics`} style={{ padding: '8px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, textDecoration: 'none', color: 'var(--text)' }}>
                   Analytics
                 </Link>
-                <Link href={`/events/${event.id}/edit`} style={{ padding: '8px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, textDecoration: 'none', color: 'var(--text)' }}>
-                  Edit
+                <Link href={`/organizer/events/${event.id}/settings`} style={{ padding: '8px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, textDecoration: 'none', color: 'var(--text)' }}>
+                  Settings
                 </Link>
               </div>
             </div>

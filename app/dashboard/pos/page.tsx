@@ -36,7 +36,7 @@ export default function POSPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const preselectedShowId = searchParams.get('showId')
-  const t = useI18n()
+  const { t } = useI18n()
   const { language, setLanguage } = useUIStore()
 
   const [shows, setShows] = useState<Show[]>([])
